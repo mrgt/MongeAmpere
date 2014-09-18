@@ -9,6 +9,9 @@
 
 namespace MA
 {
+
+  enum EdgeType { DELAUNAY, POLYGON };
+
   template <class Polygon, class DT, class Traits>
   struct Pgon_intersector
   {
@@ -19,8 +22,6 @@ namespace MA
     typedef boost::variant<Vertex_handle,size_t> Pgon_edge;
     typedef std::pair<Pgon_edge,Pgon_edge> Pgon_vertex;
     typedef std::vector<Pgon_vertex> Pgon;
-
-    enum EdgeType { DELAUNAY, POLYGON };
 
     EdgeType edge_type (const Pgon_edge &e) const
     {
