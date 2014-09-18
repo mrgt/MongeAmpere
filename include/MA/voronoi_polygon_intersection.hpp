@@ -51,7 +51,7 @@ namespace MA
     }
 
     template <class K>
-    typename CGAL::Line_2<K>
+    typename CGAL::Point_2<K>
     dual_point(const typename CGAL::Point_2<K> &p,
 	       const typename CGAL::Point_2<K> &q,
 	       const typename CGAL::Point_2<K> &r)
