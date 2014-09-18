@@ -1,12 +1,17 @@
 #include <CGAL/Delaunay_triangulation_2.h>
 
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/Filtered_kernel.h>
+
+
 #include <MA/Autodiff_nt.hpp>
 #include <MA/voronoi_polygon_intersection.hpp>
 #include <MA/misc.hpp>
 
 #include <cstdlib>
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel K;
+typedef AD FT;
+class K : public CGAL::Filtered_kernel<CGAL::Simple_cartesian<AD>> {};
 typedef CGAL::Point_2<K> Point;
 typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
@@ -47,8 +52,7 @@ int main()
   for (auto v = dt.finite_vertices_begin();
        v != dt.finite_vertices_end(); ++v)
   {
-    Polygon R;
-    MA::voronoi_polygon_intersection(cross, dt, v, R);
+    Polygon R = MA::voronoi_polygon_intersection(cross, dt, v);
     MA::ps_polygon(std::cout, R, 0.01);
     A += CGAL::to_double(R.area());
   }

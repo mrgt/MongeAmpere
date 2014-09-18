@@ -21,13 +21,17 @@ if ( COMMAND cmake_policy )
 
 endif()
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS timer chrono REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_libraries(${Boost_LIBRARIES})
 
 # CGAL and its components
-find_package( CGAL QUIET COMPONENTS  )
+find_package( CGAL QUIET COMPONENTS)
 include_directories(${MA_SOURCE_DIR}/include)
 subdirs(tests)
 ADD_DEFINITIONS(-std=c++11 -pg)
