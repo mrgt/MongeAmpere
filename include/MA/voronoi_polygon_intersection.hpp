@@ -9,7 +9,7 @@
 
 namespace MA
 {
-  template <class Polygon, class DT>
+  template <class Polygon, class DT, class Traits>
   struct Pgon_intersector
   {
     typedef typename CGAL::Kernel_traits<typename DT::Point>::Kernel K;
@@ -43,11 +43,12 @@ namespace MA
     Line
     edge_to_line (Vertex_handle v, const Pgon_edge &e) const
     {
+      typename Traits::Construct_dual construct_dual;
       if (const size_t *i = boost::get<size_t> (&e))
 	return _polygon.edge(*i).supporting_line();
       const Vertex_handle *w = boost::get<Vertex_handle> (&e);
       assert(w);
-      return details::dual_line(v->point(), (*w)->point());
+      return construct_dual(v->point(), (*w)->point());
     }
     
     Point
@@ -61,6 +62,9 @@ namespace MA
 		const Pgon_vertex &E) const
     {
       EdgeType t1 = edge_type(E.first), t2 = edge_type(E.second);
+      typename Traits::Side1 side1;
+      typename Traits::Side2 side2; 
+      typename Traits::Side3 side3;
       if (t1 == POLYGON && t2 == POLYGON)
 	{
 	  auto i2 = *boost::get<size_t> (&E.second);
@@ -71,7 +75,7 @@ namespace MA
 	  auto u1 = *boost::get<Vertex_handle> (&E.first);
 	  auto u2 = *boost::get<Vertex_handle> (&E.second);
 	  return side2(v->point(), u2->point(),
-				u1->point(), w->point());
+		       u1->point(), w->point());
 	}
 
       Vertex_handle u;
@@ -87,7 +91,8 @@ namespace MA
       	  u = *boost::get<Vertex_handle> (&E.first);
       	}
       return side3(v->point(), u->point(),
-		   _polygon.edge(i),
+		   _polygon.edge(i).source(),
+		   _polygon.edge(i).target(),
 		   w->point());
     }
 
@@ -139,10 +144,9 @@ namespace MA
 		  const DT &dt,
 		  const typename DT::Vertex_handle v)
   {
-    if (details::is_hidden(dt, v))
-      return Polygon();
-
-    typedef Pgon_intersector<Polygon, DT> Pgon_isector;
+    typedef typename CGAL::Kernel_traits<typename DT::Point>::Kernel K;
+    typedef Voronoi_intersection_traits<K> Traits;
+    typedef Pgon_intersector<Polygon, DT, Traits> Pgon_isector;
     typedef typename Pgon_isector::Pgon Pgon;
 
     Pgon R;

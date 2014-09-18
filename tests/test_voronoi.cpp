@@ -6,7 +6,7 @@
 
 #include <cstdlib>
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel K;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Point_2<K> Point;
 typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
