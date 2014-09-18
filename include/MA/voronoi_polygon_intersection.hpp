@@ -4,102 +4,11 @@
 #include <CGAL/Regular_triangulation_euclidean_traits_2.h>
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <MA/polygon_intersection.hpp>
+#include <MA/predicates.hpp>
 #include <boost/variant.hpp>
 
 namespace MA
 {
-  namespace details
-  {
-    template <class RT, class V>
-    bool is_hidden(const RT &rt, const V &v)
-    {
-      return v->is_hidden();
-    }
-    
-    template <class K, class V>
-    bool is_hidden(const CGAL::Delaunay_triangulation_2<K> &dt, 
-		   const V &v)
-    {
-      return false;
-    }
-    
-    template <class K>
-    typename CGAL::Line_2<K>
-    dual_line(const typename CGAL::Point_2<K> &p,
-	      const typename CGAL::Point_2<K> &q)
-    {
-      return CGAL::bisector(p,q);
-    }
-    
-    template <class BP, class W>
-    typename CGAL::Line_2
-    <typename CGAL::Kernel_traits<BP>::Kernel>
-    dual_line(const typename CGAL::Weighted_point<BP,W> &p,
-	      const typename CGAL::Weighted_point<BP,W> &q)
-    {
-      return CGAL::radical_axis(p,q);
-    }
-
-    template <class BP, class W>
-    typename CGAL::Point_2
-    <typename CGAL::Kernel_traits<BP>::Kernel>
-    dual_point(const typename CGAL::Weighted_point<BP,W> &p,
-	       const typename CGAL::Weighted_point<BP,W> &q,
-	       const typename CGAL::Weighted_point<BP,W> &r)
-    {
-      return CGAL::weighted_circumcenter(p,q,r);
-    }
-
-    template <class K>
-    typename CGAL::Point_2<K>
-    dual_point(const typename CGAL::Point_2<K> &p,
-	       const typename CGAL::Point_2<K> &q,
-	       const typename CGAL::Point_2<K> &r)
-    {
-      return CGAL::circumcenter(p,q,r);
-    }
-    
-    template <class BP, class W>
-    bool
-    side1(const typename CGAL::Weighted_point<BP,W> &p,
-	  const typename CGAL::Weighted_point<BP,W> &q,
-	  const BP &E)
-    {
-      CGAL::Comparison_result c = CGAL::compare_power_distance(p, q, E);
-      return (c == CGAL::SMALLER || c == CGAL::EQUAL);
-    }
-
-    template <class K>
-    bool
-    side1(const typename CGAL::Point_2<K> &p,
-	  const typename CGAL::Point_2<K> &q,
-	  const typename CGAL::Point_2<K> &E)
-    {
-      CGAL::Comparison_result c = CGAL::compare_distance(E, p, q);
-      return (c == CGAL::SMALLER || c == CGAL::EQUAL);
-    }
-
-    template <class Point>
-    bool
-    side2(const Point &v, const Point &u2, 
-	  const Point &u3, const Point &w)
-    {
-      auto E = dual_point(v,u2,u3);
-      return side1(v,w,E);
-    }
-
-    template <class Point, class Segment>
-    bool
-    side3(const Point &v, const Point &u,
-	  const Segment &S, const Point &w)
-    {
-      auto L = dual_line(v,u);
-      auto E = line_line_intersection(S.supporting_line(),L);
-      return side1(v,w,E);
-    }
-
-  }
-
   template <class Polygon, class DT>
   struct Pgon_intersector
   {
@@ -155,30 +64,31 @@ namespace MA
       if (t1 == POLYGON && t2 == POLYGON)
 	{
 	  auto i2 = *boost::get<size_t> (&E.second);
-	  return details::side1(v->point(),
-				w->point(),
-				_polygon[i2]);
+	  return side1(v->point(), w->point(), _polygon[i2]);
 	}
       if (t1 == DELAUNAY && t2 == DELAUNAY)
 	{
 	  auto u1 = *boost::get<Vertex_handle> (&E.first);
 	  auto u2 = *boost::get<Vertex_handle> (&E.second);
-	  return details::side2(v->point(),
-				u2->point(),
-				u1->point(), 
-				w->point());
+	  return side2(v->point(), u2->point(),
+				u1->point(), w->point());
 	}
+
+      Vertex_handle u;
+      size_t i;
       if (t1 == POLYGON && t2 == DELAUNAY)
 	{
-	  auto i = *boost::get<size_t> (&E.first);
-	  auto u = *boost::get<Vertex_handle> (&E.second);
-	  details::side3(v->point(),
-			 u->point(),
-			 _polygon.edge(i),
-			 w->point());
-	}
-      Point p = vertex_to_point(v, E);
-      return details::side1(v->point(), w->point(), p);
+	  i = *boost::get<size_t> (&E.first);
+	  u = *boost::get<Vertex_handle> (&E.second);
+      	}
+      else
+      	{
+      	  i = *boost::get<size_t> (&E.second);
+      	  u = *boost::get<Vertex_handle> (&E.first);
+      	}
+      return side3(v->point(), u->point(),
+		   _polygon.edge(i),
+		   w->point());
     }
 
     const Polygon &_polygon; 
