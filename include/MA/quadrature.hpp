@@ -24,7 +24,7 @@ integrate_albrecht_collatz(const typename CGAL::Point_2<K> &a,
   auto r4 = _9_60*f(a + _1_6*u + _2_3*v);
   auto r5 = _9_60*f(a + _1_6*v + _2_3*u);
   auto r6 = _9_60*f(a + _1_6*u + _1_6*v);
-  return r1+r2+r3+r4+r5+r6;
+  return CGAL::area(a,b,c)*(r1+r2+r3+r4+r5+r6);
 }
 
 template <class K, class F>
@@ -40,7 +40,7 @@ integrate_midedge(const typename CGAL::Point_2<K> &a,
   auto r1 = _1_6*f(a + _1_2*u + _1_2*v);
   auto r2 = _1_6*f(a + _1_2*u);
   auto r3 = _1_6*f(a + _1_2*v);
-  return r1+r2+r3;
+  return CGAL::area(a,b,c)*(r1+r2+r3);
 }
 
 double r01() 
@@ -76,7 +76,7 @@ integrate_monte_carlo(const typename CGAL::Point_2<K> &a,
       auto p = rand_in_triangle(a,b,c);
       r += f(p);
     }
-  return r/N;
+  return CGAL::area(a,b,c)*(r/N);
 }
 
 }

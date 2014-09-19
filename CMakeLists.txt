@@ -21,9 +21,14 @@ if ( COMMAND cmake_policy )
 
 endif()
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
+
+find_package(CImg REQUIRED)
+include_directories(${CIMG_INCLUDE_DIRS})
+link_libraries(${CIMG_PROCESS_LIBS})
+
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS timer chrono REQUIRED)

@@ -11,7 +11,7 @@ namespace MA
   voronoi_triangulation_intersection
                  (const T &t,
 		  const DT &dt,
-		  F out)
+		  F &out)
   {
     typedef typename CGAL::Kernel_traits<typename DT::Point>::Kernel K;
     typedef Voronoi_intersection_traits<K> Traits;
@@ -91,7 +91,7 @@ namespace MA
 		Q.push(p);
 	      }
     	  }
-	out(res);
+	out(res, f, v);
       }
   }
 }
