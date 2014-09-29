@@ -33,6 +33,10 @@
     {
       m_derivatives.coeffRef(derNumber) = Scalar(1);
     }
+
+    AD(const Scalar& value, int nbDer)
+      : m_value(value), m_derivatives(Vector(nbDer))
+    {}
     
     /** Conversion from a scalar constant to an active scalar.
      * The derivatives are set to zero. */

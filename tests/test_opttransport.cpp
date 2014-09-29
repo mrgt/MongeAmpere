@@ -17,15 +17,14 @@
 #include <cstdlib>
 #include <Eigen/Dense>
 
-typedef AD FT;
-typedef CGAL::Filtered_kernel<CGAL::Simple_cartesian<AD>> K;
-
-//typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef K::FT FT;
 typedef CGAL::Point_2<K> Point;
 typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
 typedef CGAL::Polygon_2<K> Polygon;
-//typedef K::FT FT;
+
+typedef CGAL::Simple_cartesian<AD> K_ad;
 
 typedef CGAL::Regular_triangulation_filtered_traits_2<K> Traits;
 typedef CGAL::Regular_triangulation_2<Traits> Regular_triangulation;
@@ -44,17 +43,13 @@ double ot_eval (const Triangulation &densityT,
 		const std::vector<Point> &X,
 		const std::vector<double> &masses,
 		std::map<Point,size_t> indices,
-		const std::vector<double> &w,
+		const std::vector<double> &weights,
 		std::vector<double> &g)
 {
   size_t N = X.size();
   std::vector<Weighted_point> Xw(N);
-  std::vector<FT> weights;
   for (size_t i = 0; i < N; ++i)
-    {
-      weights.push_back(AD(w[i], N, i));
-      Xw[i] = Weighted_point(X[i], weights[i]);
-    }
+    Xw[i] = Weighted_point(X[i], weights[i]);
   Regular_triangulation dt (Xw.begin(), Xw.end());
 
   // compute the linear part of the function
@@ -82,14 +77,14 @@ double ot_eval (const Triangulation &densityT,
 			       });
      size_t idx = indices[v->point()];
      fval = fval + area * weights[idx] - intg; 
-     g[idx] = g[idx] + area.value();
+     g[idx] = g[idx] + area;
      total += area;
    });
 
   std::cerr << "total = " << total << "/ " << tmass << "\n";
-  Eigen::VectorXd gg = fval.derivatives();
-  std::cerr << "g[0] = " << g[0] << "/ " << gg(0) << "\n";
-  return fval.value();
+  //Eigen::VectorXd gg = fval.derivatives();
+  //  std::cerr << "g[0] = " << g[0] << "/ " << gg(0) << "\n";
+  return fval;
 }
 
 template <class FT>
@@ -106,7 +101,8 @@ int main(int argc, const char **argv)
   if (argc < 2)
     return -1;
 
-  std::map<Triangulation::Face_handle, MA::Linear_function<K>> functions;
+  std::map<Triangulation::Face_handle,
+	   MA::Linear_function<K>> functions;
   Triangulation t;
   cimg_library::CImg<double> image(argv[1]);
   double total_mass = MA::image_to_pl_function(image, t, functions);

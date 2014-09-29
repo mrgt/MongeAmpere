@@ -27,10 +27,9 @@ namespace MA
 
   template <class T, class DT, class F>
   void
-  voronoi_triangulation_intersection
-                 (const T &t,
-		  const DT &dt,
-		  F out)
+  voronoi_triangulation_intersection_raw(const T &t,
+					 const DT &dt,
+					 F out)
   {
     typedef typename CGAL::Kernel_traits<typename DT::Point>::Kernel K;
     typedef Voronoi_intersection_traits<K> Traits;
@@ -83,11 +82,10 @@ namespace MA
 	    R = Rl;
 	  }
 	while (++c != done);
-
-	Polygon res;
+	
+	// propagate to neighbors
 	for (auto E:R)
 	  {
-	    res.push_back(isector.vertex_to_point(v, E));
 	    for (auto seg:{E.first, E.second})
 	      {
 		VF_pair p;
@@ -110,9 +108,36 @@ namespace MA
 		Q.push(p);
 	      }
     	  }
-	out(res, f, v);
+	out(Ptri, R, f, v);
       }
   }
+
+  template <class T, class DT, class F>
+  void
+  voronoi_triangulation_intersection(const T &t,
+				     const DT &dt,
+				     F out)
+  {
+    typedef typename CGAL::Kernel_traits<typename DT::Point>::Kernel K;
+    typedef Voronoi_intersection_traits<K> Traits;
+    typedef CGAL::Polygon_2<K> Polygon;
+    typedef Pgon_intersector<Polygon, DT, Traits> Pgon_isector;
+    typedef typename Pgon_isector::Pgon Pgon;
+
+    voronoi_triangulation_intersection_raw
+      (t, dt,
+       [&] (const Polygon &Ptri,
+	    const Pgon &R,
+	    typename T::Face_handle f,
+	    typename DT::Vertex_handle v)
+       {
+	 Pgon_isector isector(Ptri,dt);
+	 Polygon res;
+	 for (auto E:R)
+	   res.push_back(isector.vertex_to_point(v, E));
+	 out(res,f,v);
+       });
+  }  
 }
 
 #endif
