@@ -36,7 +36,7 @@
     
     /** Conversion from a scalar constant to an active scalar.
      * The derivatives are set to zero. */
-    /*explicit*/ AD(const Scalar& value)
+    /* explicit */ AD(const Scalar& value)
       : m_value(value)
     {
       if(m_derivatives.size()>0)

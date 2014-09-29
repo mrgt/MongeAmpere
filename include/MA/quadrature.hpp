@@ -2,6 +2,7 @@
 #define MA_QUADRATURE_HPP
 
 #include <CGAL/Simple_cartesian.h>
+#include <CGAL/Polygon_2.h>
 
 namespace MA
 {
@@ -16,14 +17,14 @@ integrate_albrecht_collatz(const typename CGAL::Point_2<K> &a,
 {
   typedef typename K::FT FT;
   const FT _1_2 = FT(1)/FT(2), _1_6 = FT(1)/FT(6), _2_3 = FT(2)/FT(3);
-  const FT _1_60 = FT(1)/FT(60), _9_60 = FT(9)/FT(60);
+  const FT _1_30 = FT(1)/FT(30), _9_30 = FT(9)/FT(30);
   auto  u = b-a, v = c-a;
-  auto r1 = _1_60*f(a + _1_2*u + _1_2*v);
-  auto r2 = _1_60*f(a + _1_2*u);
-  auto r3 = _1_60*f(a + _1_2*v);
-  auto r4 = _9_60*f(a + _1_6*u + _2_3*v);
-  auto r5 = _9_60*f(a + _1_6*v + _2_3*u);
-  auto r6 = _9_60*f(a + _1_6*u + _1_6*v);
+  auto r1 = _1_30*f(a + _1_2*u + _1_2*v);
+  auto r2 = _1_30*f(a + _1_2*u);
+  auto r3 = _1_30*f(a + _1_2*v);
+  auto r4 = _9_30*f(a + _1_6*u + _2_3*v);
+  auto r5 = _9_30*f(a + _1_6*v + _2_3*u);
+  auto r6 = _9_30*f(a + _1_6*u + _1_6*v);
   return CGAL::area(a,b,c)*(r1+r2+r3+r4+r5+r6);
 }
 
@@ -35,12 +36,31 @@ integrate_midedge(const typename CGAL::Point_2<K> &a,
 		  const F &f) -> decltype(f(a))
 {
   typedef typename K::FT FT;
-  const FT _1_2 = FT(1)/FT(2), _1_6 = FT(1)/FT(6);
-  auto u = b-a, v = c-a;
-  auto r1 = _1_6*f(a + _1_2*u + _1_2*v);
-  auto r2 = _1_6*f(a + _1_2*u);
-  auto r3 = _1_6*f(a + _1_2*v);
-  return CGAL::area(a,b,c)*(r1+r2+r3);
+  auto r1 = f(CGAL::midpoint(a,b));
+  auto r2 = f(CGAL::midpoint(a,c));
+  auto r3 = f(CGAL::midpoint(b,c));
+  return CGAL::area(a,b,c)*(r1+r2+r3)/FT(3);
+}
+
+template <class K, class F>
+auto
+integrate_vertices(const typename CGAL::Point_2<K> &a, 
+		   const typename CGAL::Point_2<K> &b, 
+		   const typename CGAL::Point_2<K> &c,
+		   const F &f) -> decltype(f(a))
+{
+  typedef typename K::FT FT;
+  return CGAL::area(a,b,c)*(f(a)+f(b)+f(c))/FT(3);
+}
+
+template <class K, class F>
+auto
+integrate_centroid(const typename CGAL::Point_2<K> &a, 
+		   const typename CGAL::Point_2<K> &b, 
+		   const typename CGAL::Point_2<K> &c,
+		   const F &f) -> decltype(f(a))
+{
+  return CGAL::area(a,b,c)*f(CGAL::centroid(a,b,c));
 }
 
 double r01() 
@@ -78,6 +98,33 @@ integrate_monte_carlo(const typename CGAL::Point_2<K> &a,
     }
   return CGAL::area(a,b,c)*(r/N);
 }
+
+template <class K, class F>
+typename K::FT
+integrate_1(const typename CGAL::Polygon_2<K> &p, const F &f)
+{
+  typedef typename K::FT FT;
+  FT r = 0;
+  if (p.size() <= 2)
+    return r;
+  for (size_t i = 1; i < p.size() - 1; ++i)
+    r += MA::integrate_centroid(p[0],p[i],p[i+1],f);
+  return r;
+}
+
+template <class K, class F>
+typename K::FT
+integrate_3(const typename CGAL::Polygon_2<K> &p, const F &f)
+{
+  typedef typename K::FT FT;
+  FT r = 0;
+  if (p.size() <= 2)
+    return r;
+  for (size_t i = 1; i < p.size() - 1; ++i)
+    r += MA::integrate_albrecht_collatz(p[0],p[i],p[i+1],f);
+  return r;
+}
+
 
 }
 

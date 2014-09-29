@@ -1,17 +1,36 @@
 #ifndef MA_VORONOI_TRIANGULATION_INTERSECTION
 #define MA_VORONOI_TRIANGULATION_INTERSECTION
 
+#include <CGAL/Regular_triangulation_2.h>
+#include <CGAL/Delaunay_triangulation_2.h>
 #include <MA/voronoi_polygon_intersection.hpp>
 #include <queue>
 
 namespace MA
 {
+  template <class K>
+  typename CGAL::Delaunay_triangulation_2<K>::Vertex_handle
+  nearest_vertex(const typename CGAL::Delaunay_triangulation_2<K> &dt,
+		 const typename CGAL::Point_2<K>  &p)
+  {
+    return dt.nearest_vertex(p);
+  }
+
+  template <class K, class Gt>
+  typename CGAL::Regular_triangulation_2<Gt>::Vertex_handle
+  nearest_vertex(const typename CGAL::Regular_triangulation_2<Gt> &dt,
+		 const typename CGAL::Point_2<K> &p)
+  {
+    return dt.nearest_power_vertex(p);
+  }
+
+
   template <class T, class DT, class F>
   void
   voronoi_triangulation_intersection
                  (const T &t,
 		  const DT &dt,
-		  F &out)
+		  F out)
   {
     typedef typename CGAL::Kernel_traits<typename DT::Point>::Kernel K;
     typedef Voronoi_intersection_traits<K> Traits;
@@ -28,7 +47,7 @@ namespace MA
 
     // insert seed
     Face_handle_T f = t.finite_faces_begin();
-    Vertex_handle_DT v = dt.nearest_vertex(f->vertex(0)->point());
+    Vertex_handle_DT v = nearest_vertex(dt, f->vertex(0)->point());
 
     typedef std::pair<Vertex_handle_DT, Face_handle_T> VF_pair;
     std::priority_queue<VF_pair> Q;

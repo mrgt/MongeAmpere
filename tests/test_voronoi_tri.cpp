@@ -41,13 +41,13 @@ struct F
 int main()
 {
   std::vector<Point> pts;
-  for (size_t i = 0; i < 1000; ++i)
+  for (size_t i = 0; i < 100000; ++i)
     pts.push_back(Point(rr(), rr()));
   DT dt (pts.begin(), pts.end());
 
   // 
   std::vector<Point> grid;
-  int n = 10;
+  int n = 1;
   for (int i = -n; i <= n; ++i)
     {
       for (int j = -n; j <= n; ++j)

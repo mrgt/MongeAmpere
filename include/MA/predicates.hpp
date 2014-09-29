@@ -124,7 +124,7 @@ namespace MA
     
     typedef Voronoi_intersection_traits_base::Construct_dual Construct_dual;
 
-    // Side1 (= power_test_2 or side_of_oriented_circle_2 is already
+    // Side1 (= power_test_2 or side_of_oriented_circle_2) is already
     // filtered by CGAL
     typedef Voronoi_intersection_traits_base::Side1 Side1;
 

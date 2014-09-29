@@ -11,7 +11,7 @@
 #include <cstdlib>
 
 typedef AD FT;
-class K : public CGAL::Filtered_kernel<CGAL::Simple_cartesian<AD>> {};
+typedef CGAL::Filtered_kernel<CGAL::Simple_cartesian<AD>> K;
 typedef CGAL::Point_2<K> Point;
 typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
