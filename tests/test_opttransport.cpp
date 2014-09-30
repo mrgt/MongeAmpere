@@ -1,6 +1,6 @@
-#include <CGAL/Simple_cartesian.h>
-#include <CGAL/Filtered_kernel.h>
-#include <MA/Autodiff_nt.hpp>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <CGAL/Regular_triangulation_euclidean_traits_2.h>
@@ -15,7 +15,6 @@
 #include <boost/timer/timer.hpp>
 #include <lbfgs.hpp>
 #include <cstdlib>
-#include <Eigen/Dense>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::FT FT;
@@ -24,50 +23,82 @@ typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
 typedef CGAL::Polygon_2<K> Polygon;
 
-typedef CGAL::Simple_cartesian<AD> K_ad;
+//typedef CGAL::Simple_cartesian<AD> K_ad;
 
 typedef CGAL::Regular_triangulation_filtered_traits_2<K> Traits;
-typedef CGAL::Regular_triangulation_2<Traits> Regular_triangulation;
-typedef Regular_triangulation::Weighted_point Weighted_point;
+typedef CGAL::Regular_triangulation_2<Traits> RT;
+typedef RT::Vertex_handle Vertex_handle_RT;
+typedef RT::Weighted_point Weighted_point;
 
-typedef CGAL::Delaunay_triangulation_2<K> Triangulation;
+typedef CGAL::Delaunay_triangulation_2<K> T;
 
 double rr() 
 { 
   return 2*double(rand() / (RAND_MAX + 1.0))-1;
 }
 
+typedef Eigen::Triplet<double> Triplet;
+typedef Eigen::SparseMatrix<double> SparseMatrix;
+typedef Eigen::SparseVector<double> SparseVector;
+typedef Eigen::VectorXd VectorXd;
+
 template <class Functions>
-double ot_eval (const Triangulation &densityT,
+double ot_eval (const T &densityT,
 		Functions &densityF,
 		const std::vector<Point> &X,
-		const std::vector<double> &masses,
+		VectorXd &masses,
 		std::map<Point,size_t> indices,
-		const std::vector<double> &weights,
-		std::vector<double> &g)
+		const VectorXd &weights,
+		VectorXd &g)
 {
   size_t N = X.size();
   std::vector<Weighted_point> Xw(N);
   for (size_t i = 0; i < N; ++i)
     Xw[i] = Weighted_point(X[i], weights[i]);
-  Regular_triangulation dt (Xw.begin(), Xw.end());
+  RT dt (Xw.begin(), Xw.end());
 
   // compute the linear part of the function
-  FT fval(0), total(0), tmass(0);
-  for (size_t i = 0; i < N; ++i)
-    {
-      fval = fval - masses[i]*weights[i];
-      g[i] = - masses[i];
-      tmass += masses[i];
-    }
+  g = - masses;
+  FT fval = - masses.dot(weights);
 
   // compute the quadratic part
-  MA::voronoi_triangulation_intersection
+  typedef MA::Voronoi_intersection_traits<K> Traits;
+  typedef MA::Tri_intersector<T,RT,Traits> Tri_isector;  
+  typedef typename Tri_isector::Pgon Pgon;
+
+  FT total(0);
+  MA::voronoi_triangulation_intersection_raw
   (densityT,dt,
-   [&] (const Polygon &p,
-	Triangulation::Face_handle f,
-	Regular_triangulation::Vertex_handle v)
+   [&] (const Pgon &pgon,
+	T::Face_handle f,
+	RT::Vertex_handle v)
    {
+     Tri_isector isector;
+
+     Polygon p;
+     std::vector<Vertex_handle_RT> adj;
+     for (size_t i = 0; i < pgon.size(); ++i)
+       {
+	 p.push_back(isector.vertex_to_point(pgon[i]));
+	 Tri_isector::Pgon_edge e = MA::common(pgon[i], 
+					       pgon[(i+1)%pgon.size()]);
+	 adj.push_back((e.type == Tri_isector::EDGE_DT) ?
+		       e.edge_dt.second : 0);
+       }
+
+     size_t idv = indices[v->point()];
+     
+     // compute hessian
+     for (size_t i = 0; i < p.size(); ++i)
+       {
+	 if (adj[i] == 0)
+	   continue;
+	 FT r = MA::integrate_1(p.edge(i), densityF[f]);
+	 Vertex_handle_RT w = adj[i];
+	 size_t idw = indices[w->point()];
+       }
+
+     // compute value and gradient
      FT area = MA::integrate_1(p, densityF[f]);
      FT intg = MA::integrate_3(p, [&](Point p) 
 			       {
@@ -75,25 +106,15 @@ double ot_eval (const Triangulation &densityT,
 			         (densityF[f](p) * 
 			          CGAL::squared_distance(p, v->point()));
 			       });
-     size_t idx = indices[v->point()];
-     fval = fval + area * weights[idx] - intg; 
-     g[idx] = g[idx] + area;
+     fval = fval + area * weights[idv] - intg; 
+     g[idv] = g[idv] + area;
      total += area;
    });
 
-  std::cerr << "total = " << total << "/ " << tmass << "\n";
+  std::cerr << "total = " << total  << "\n";
   //Eigen::VectorXd gg = fval.derivatives();
   //  std::cerr << "g[0] = " << g[0] << "/ " << gg(0) << "\n";
   return fval;
-}
-
-template <class FT>
-FT norm(const std::vector<FT> &v)
-{
-  FT r (0);
-  for (auto p:v)
-    r = std::max(r, fabs(p));
-  return r;
 }
 
 int main(int argc, const char **argv)
@@ -101,9 +122,9 @@ int main(int argc, const char **argv)
   if (argc < 2)
     return -1;
 
-  std::map<Triangulation::Face_handle,
+  std::map<T::Face_handle,
 	   MA::Linear_function<K>> functions;
-  Triangulation t;
+  T t;
   cimg_library::CImg<double> image(argv[1]);
   double total_mass = MA::image_to_pl_function(image, t, functions);
   boost::timer::auto_cpu_timer tm(std::cerr);
@@ -111,7 +132,7 @@ int main(int argc, const char **argv)
   // generate points
   size_t N = 50;
   std::vector<Point> X(N);
-  std::vector<double> masses(N);
+  VectorXd masses(N);
   std::map<Point, size_t> indices;
   for (size_t i = 0; i < N; ++i)
     {
@@ -123,8 +144,8 @@ int main(int argc, const char **argv)
 
   std::cerr << total_mass << "\n";
 
-  auto eval = [&](const std::vector<double> &weights,
-		  std::vector<double> &g)
+  auto eval = [&](const VectorXd &weights,
+		  VectorXd &g)
     {
       return ot_eval(t, functions, X, masses, indices, weights, g);
     };
@@ -133,7 +154,7 @@ int main(int argc, const char **argv)
   //lb._pgtol = 1e-6 / N;
   //lb._factr = 1e6;
 
-  std::vector<double> g (N,0), weights(N,0);
+  VectorXd g = VectorXd::Zero(N), weights = g;
   double f = eval(weights, g);
   size_t k = 0;
 
@@ -158,7 +179,7 @@ int main(int argc, const char **argv)
       else if (r == LBFGS_NEW_X)
         {
           std::cerr << (++k) << ": f="
-                    << f << " |df| = " << norm(g) << "\n";
+                    << f << " |df| = " << g.maxCoeff() << "\n";
         }
       else
         break;

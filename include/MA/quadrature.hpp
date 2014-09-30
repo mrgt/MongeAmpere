@@ -63,6 +63,15 @@ integrate_centroid(const typename CGAL::Point_2<K> &a,
   return CGAL::area(a,b,c)*f(CGAL::centroid(a,b,c));
 }
 
+template <class K, class F>
+typename K::FT
+integrate_1(const typename CGAL::Segment_2<K> &p, const F &f)
+{
+  typedef typename K::FT FT;
+  return sqrt(p.squared_length()) * f(CGAL::midpoint(p.source(),
+						     p.target()));
+}
+
 double r01() 
 { 
   return double(rand() / (RAND_MAX + 1.0));
@@ -111,6 +120,7 @@ integrate_1(const typename CGAL::Polygon_2<K> &p, const F &f)
     r += MA::integrate_centroid(p[0],p[i],p[i+1],f);
   return r;
 }
+
 
 template <class K, class F>
 typename K::FT

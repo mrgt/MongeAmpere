@@ -1,6 +1,8 @@
 #ifndef MA_MISC_HPP
 #define MA_MISC_HPP
 
+#include <CGAL/Polygon_2.h>
+
 namespace MA
 {
   void ps_begin(std::ostream &os)

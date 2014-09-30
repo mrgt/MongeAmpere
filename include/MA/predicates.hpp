@@ -3,6 +3,17 @@
 
 namespace MA
 {
+  template <class K>
+  typename CGAL::Point_2<K>
+  line_line_intersection (const typename CGAL::Line_2<K> &L,
+			  const typename CGAL::Line_2<K> &M)
+  {
+    auto isect = CGAL::intersection(L,M);
+    auto p = boost::get<typename CGAL::Point_2<K>>(&*isect);
+    assert(p != 0);
+    return *p;
+  }
+
   class Voronoi_intersection_traits_base
   {
   public:    

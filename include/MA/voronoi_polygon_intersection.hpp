@@ -3,7 +3,6 @@
 
 #include <CGAL/Regular_triangulation_euclidean_traits_2.h>
 #include <CGAL/Delaunay_triangulation_2.h>
-#include <MA/polygon_intersection.hpp>
 #include <MA/predicates.hpp>
 #include <boost/variant.hpp>
 

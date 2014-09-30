@@ -41,7 +41,7 @@ struct F
 int main()
 {
   std::vector<Point> pts;
-  for (size_t i = 0; i < 100000; ++i)
+  for (size_t i = 0; i < 100; ++i)
     pts.push_back(Point(rr(), rr()));
   DT dt (pts.begin(), pts.end());
 
