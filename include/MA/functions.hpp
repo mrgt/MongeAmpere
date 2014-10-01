@@ -79,13 +79,12 @@ image_to_pl_function(const cimg_library::CImg<double> &image,
   double dy = 2/double(m-1), y0=-1.0;
   for (size_t i = 0; i < n; ++i)
     {
-      double y = -1;
       for (size_t j = 0; j < m; ++j)
 	{
 	  Point p(x0 + i * dx,
 		  y0 + j * dy);
 	  grid.push_back(p);
-	  fgrid[p] = image(i,m-j)/double(255);
+	  fgrid[p] = image(i,m-j-1)/double(255) + 1e-3;
 	}
     }
   t = T(grid.begin(), grid.end());

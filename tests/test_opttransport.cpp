@@ -1,20 +1,18 @@
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
-#include <CGAL/Regular_triangulation_filtered_traits_2.h>
-#include <CGAL/Regular_triangulation_2.h>
-
-#include <MA/voronoi_triangulation_intersection.hpp>
-#include <MA/voronoi_polygon_intersection.hpp>
-#include <MA/quadrature.hpp>
-#include <MA/misc.hpp>
-#include <MA/functions.hpp>
+#define EIGEN_CHOLMOD_SUPPORT
+#include <MA/optimal_transport.hpp>
 #include <boost/timer/timer.hpp>
 #include <lbfgs.hpp>
 #include <cstdlib>
+
+#undef Success
+
+//#include <Eigen/SparseLU>
+// fix for suitesparse
+#include <cs.h>
+#ifndef UF_long
+#define  UF_long cs_long_t
+#endif
+#include <Eigen/SPQRSupport>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::FT FT;
@@ -25,10 +23,11 @@ typedef CGAL::Polygon_2<K> Polygon;
 
 //typedef CGAL::Simple_cartesian<AD> K_ad;
 
-typedef CGAL::Regular_triangulation_filtered_traits_2<K> Traits;
-typedef CGAL::Regular_triangulation_2<Traits> RT;
-typedef RT::Vertex_handle Vertex_handle_RT;
-typedef RT::Weighted_point Weighted_point;
+typedef Eigen::Triplet<FT> Triplet;
+typedef Eigen::SparseMatrix<FT> SparseMatrix;
+typedef Eigen::SparseVector<FT> SparseVector;
+typedef Eigen::VectorXd VectorXd;
+typedef Eigen::MatrixXd MatrixXd;
 
 typedef CGAL::Delaunay_triangulation_2<K> T;
 
@@ -37,84 +36,41 @@ double rr()
   return 2*double(rand() / (RAND_MAX + 1.0))-1;
 }
 
-typedef Eigen::Triplet<double> Triplet;
-typedef Eigen::SparseMatrix<double> SparseMatrix;
-typedef Eigen::SparseVector<double> SparseVector;
-typedef Eigen::VectorXd VectorXd;
-
-template <class Functions>
-double ot_eval (const T &densityT,
-		Functions &densityF,
-		const std::vector<Point> &X,
-		VectorXd &masses,
-		std::map<Point,size_t> indices,
-		const VectorXd &weights,
-		VectorXd &g)
+template <class F>
+void eval_gradient_fd(F f, const VectorXd &x, VectorXd &g,
+		      FT eps = 1e-5)
 {
-  size_t N = X.size();
-  std::vector<Weighted_point> Xw(N);
+  size_t N = x.size();
+  g = VectorXd::Zero(N);
+
   for (size_t i = 0; i < N; ++i)
-    Xw[i] = Weighted_point(X[i], weights[i]);
-  RT dt (Xw.begin(), Xw.end());
+    {
+      VectorXd xp = x, xm = x;
+      VectorXd gg = g;
+      SparseMatrix hh;
+      xp[i] += eps;
+      xm[i] -= eps;
+      FT fp = f(xp, gg, hh), fm = f(xm, gg, hh);
+      g[i] = (fp - fm)/(2*eps);
+    }
+}
 
-  // compute the linear part of the function
-  g = - masses;
-  FT fval = - masses.dot(weights);
-
-  // compute the quadratic part
-  typedef MA::Voronoi_intersection_traits<K> Traits;
-  typedef MA::Tri_intersector<T,RT,Traits> Tri_isector;  
-  typedef typename Tri_isector::Pgon Pgon;
-
-  FT total(0);
-  MA::voronoi_triangulation_intersection_raw
-  (densityT,dt,
-   [&] (const Pgon &pgon,
-	T::Face_handle f,
-	RT::Vertex_handle v)
-   {
-     Tri_isector isector;
-
-     Polygon p;
-     std::vector<Vertex_handle_RT> adj;
-     for (size_t i = 0; i < pgon.size(); ++i)
-       {
-	 p.push_back(isector.vertex_to_point(pgon[i]));
-	 Tri_isector::Pgon_edge e = MA::common(pgon[i], 
-					       pgon[(i+1)%pgon.size()]);
-	 adj.push_back((e.type == Tri_isector::EDGE_DT) ?
-		       e.edge_dt.second : 0);
-       }
-
-     size_t idv = indices[v->point()];
-     
-     // compute hessian
-     for (size_t i = 0; i < p.size(); ++i)
-       {
-	 if (adj[i] == 0)
-	   continue;
-	 FT r = MA::integrate_1(p.edge(i), densityF[f]);
-	 Vertex_handle_RT w = adj[i];
-	 size_t idw = indices[w->point()];
-       }
-
-     // compute value and gradient
-     FT area = MA::integrate_1(p, densityF[f]);
-     FT intg = MA::integrate_3(p, [&](Point p) 
-			       {
-                                 return
-			         (densityF[f](p) * 
-			          CGAL::squared_distance(p, v->point()));
-			       });
-     fval = fval + area * weights[idv] - intg; 
-     g[idv] = g[idv] + area;
-     total += area;
-   });
-
-  std::cerr << "total = " << total  << "\n";
-  //Eigen::VectorXd gg = fval.derivatives();
-  //  std::cerr << "g[0] = " << g[0] << "/ " << gg(0) << "\n";
-  return fval;
+template <class F>
+void eval_hessian_fd(F f, const VectorXd &x, MatrixXd &h,
+		      FT eps = 1e-5)
+{
+  size_t N = x.size();
+  h = MatrixXd::Zero(N,N);
+  for (size_t i = 0; i < N; ++i)
+    {
+      VectorXd xp = x, xm = x;
+      VectorXd gp = VectorXd::Zero(N), gm = VectorXd::Zero(N);
+      SparseMatrix hh;
+      xp[i] += eps;
+      xm[i] -= eps;
+      FT fp = f(xp, gp, hh), fm = f(xm, gm, hh);
+      h.row(i) = (gp - gm)/(2*eps);
+    }
 }
 
 int main(int argc, const char **argv)
@@ -130,32 +86,147 @@ int main(int argc, const char **argv)
   boost::timer::auto_cpu_timer tm(std::cerr);
 
   // generate points
-  size_t N = 50;
-  std::vector<Point> X(N);
+  size_t N = 20000;
+  MatrixXd X(N,2);
   VectorXd masses(N);
-  std::map<Point, size_t> indices;
   for (size_t i = 0; i < N; ++i)
     {
-      Point p(rr(), rr());
-      X[i] = p;
-      masses[i] = total_mass/N;
-      indices[p] = i;
+      X(i,0) = rr();
+      X(i,1) = rr();
+      masses(i) = total_mass/N;
     }
 
   std::cerr << total_mass << "\n";
 
   auto eval = [&](const VectorXd &weights,
-		  VectorXd &g)
+		  VectorXd &g,
+		  SparseMatrix &h)
     {
-      return ot_eval(t, functions, X, masses, indices, weights, g);
+      return ot_eval(t, functions, X, masses, weights, g, h);
     };
+  auto evalg = [&](const VectorXd &x, VectorXd &g)
+    {
+      SparseMatrix h;
+      return eval(x,g,h);
+    };
+
+  VectorXd x = VectorXd::Zero(N);
+  double eps_g = 1e-6;
+  size_t iteration = 1;
+  do
+    {
+      VectorXd g;
+      SparseMatrix h;
+      double fx = eval(x, g, h);
+
+      if (g.norm() < eps_g)
+	break;
+
+#if 0
+      // Eigen::SimplicialLDLT<SparseMatrix> solver;      
+      Eigen::SPQR<SparseMatrix> solver;
+      Eigen::VectorXd dH = h.diagonal();
+      FT mindiag = dH.minCoeff();
+
+      // Attempt repeated Cholesky factorization until the Hessian
+      // becomes positive semidefinite.
+      FT beta = 1e-5;
+      FT tau = (mindiag > 0) ? 0 : (-mindiag + beta);
+      size_t factorizations = 0;
+      while (true)
+	{
+	  // Add tau*I to the Hessian.
+	  if (tau > 0)
+	    {
+	      std::cerr << tau << "\n";
+	      for (size_t i = 0; i < N; ++i)
+		{
+		  int ii = static_cast<int>(i);
+		  h.coeffRef(ii, ii) = dH(i) + tau;
+		}
+	    }
+	  // Attempt Cholesky factorization.
+	  solver.compute(h);
+	  bool success = (solver.info() == Eigen::Success);
+	  factorizations++;
+	  // Check for success.
+	  if (success)
+	    break;
+	  tau = std::max(2*tau, beta);
+	  assert(factorizations <= 100);
+	}
+      VectorXd d = solver.solve(-g);
+#endif
+#if 1
+      Eigen::SPQR<SparseMatrix> solver(h);
+      VectorXd mg = -g;
+      VectorXd d = solver.solve(mg);
+#else
+      // SparseMatrix id(N,N);
+      // id.setIdentity();
+      // h = h + 1e-9 * id;
+
+      Eigen::CholmodDecomposition<SparseMatrix> solver;
+      solver.setShift(1e-8);
+      solver.compute(h);
+      VectorXd mg = -g;
+      VectorXd d = solver.solve(mg);
+#endif
+
+#if 0
+      double alpha = MA::perform_Wolfe_linesearch(evalg, x, fx, g, d, 1);
+      if (alpha < 1e-15)
+	{
+	  d = -g;
+	  alpha = MA::perform_Wolfe_linesearch(evalg, x, fx, g, d, 1);
+	}
+#endif
+
+      double alpha = 1;
+      while(1)
+	{
+	  VectorXd xx = x + alpha * d;
+	  VectorXd gg;
+	  evalg(xx,gg);
+	  gg = gg + masses;
+	  if (gg.minCoeff() > 1e-7)
+	    break;
+	  alpha = alpha / 2;
+	  std::cerr << alpha << "\n";
+	}
+
+      x = x + alpha * d;
+      std::cerr << "iteration " << iteration++
+		<< " f=" << fx 
+		<< " |df|=" << g.norm()
+		<< " tau = " << alpha << "\n";
+    }
+  while (1);
+  return 0;
+
+#if 1
+  {
+    srand(time(NULL));
+    VectorXd x = VectorXd::Random(N), gfd, gx;
+    SparseMatrix hx;
+    MatrixXd hfd;
+    eval(x, gx, hx);
+    eval_gradient_fd(eval, x, gfd, 1e-5);
+    eval_hessian_fd(eval, x, hfd, 1e-5);
+    
+    std::cerr << (gx-gfd).norm() << "\n";
+    std::cerr << (hfd-MatrixXd(hx)).norm() << "\n";
+    std::cerr << hx << "\n";
+  }
+#endif
 
   Lbfgs lb (N);
   //lb._pgtol = 1e-6 / N;
   //lb._factr = 1e6;
 
   VectorXd g = VectorXd::Zero(N), weights = g;
-  double f = eval(weights, g);
+  SparseMatrix h;
+  double f = eval(weights, g, h);
   size_t k = 0;
 
   while (1)
@@ -164,17 +235,7 @@ int main(int argc, const char **argv)
 			 (double *) &g[0]);
       if (r == LBFGS_FG)
 	{
-	  f = eval(weights, g);
-#if 0
-	  auto wp = weights, wm = weights;
-	  auto gg = g;
-	  double eps = 1e-5;
-	  wp[0] = weights[0]+eps;
-	  wm[0] = weights[0]-eps;
-	  double fp = eval(wp, gg), fm = eval(wm, gg);
-	  std::cerr << "Gfd=" << ((fp - fm)/(2*eps)) << " / G=";
-	  std::cerr << g[0] << "\n";
-#endif
+	  f = eval(weights, g, h);
 	}
       else if (r == LBFGS_NEW_X)
         {

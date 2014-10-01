@@ -29,6 +29,18 @@ find_package(CImg REQUIRED)
 include_directories(${CIMG_INCLUDE_DIRS})
 link_libraries(${CIMG_PROCESS_LIBS})
 
+find_package(SuiteSparse REQUIRED)
+include_directories(${CSPARSE_INCLUDE_DIR})
+link_libraries(${SPQR_LIBRARY} ${CHOLMOD_LIBRARIES} lapack blas colamd)
+link_libraries(${CSPARSE_LIBRARY})
+link_libraries(${SUITESPARSECONFIG_LIBRARY})
+
+find_package(TBB)
+if(TBB_FOUND)
+  include_directories(${TBB_INCLUDE_DIRS})
+  link_libraries(${TBB_LIBRARIES})
+endif()
+
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS timer chrono REQUIRED)
