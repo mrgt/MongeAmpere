@@ -1,4 +1,3 @@
-#define EIGEN_CHOLMOD_SUPPORT
 #include <MA/optimal_transport.hpp>
 #include <boost/timer/timer.hpp>
 #include <lbfgs.hpp>
@@ -6,8 +5,8 @@
 
 #undef Success
 
-//#include <Eigen/SparseLU>
-// fix for suitesparse
+// Suitesparse 4.3.1 does not define UF_long, which is expected by the
+// Eigen wrapper classes
 #include <cs.h>
 #ifndef UF_long
 #define  UF_long cs_long_t
@@ -21,9 +20,6 @@ typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
 typedef CGAL::Polygon_2<K> Polygon;
 
-//typedef CGAL::Simple_cartesian<AD> K_ad;
-
-typedef Eigen::Triplet<FT> Triplet;
 typedef Eigen::SparseMatrix<FT> SparseMatrix;
 typedef Eigen::SparseVector<FT> SparseVector;
 typedef Eigen::VectorXd VectorXd;
@@ -36,42 +32,6 @@ double rr()
   return 2*double(rand() / (RAND_MAX + 1.0))-1;
 }
 
-template <class F>
-void eval_gradient_fd(F f, const VectorXd &x, VectorXd &g,
-		      FT eps = 1e-5)
-{
-  size_t N = x.size();
-  g = VectorXd::Zero(N);
-
-  for (size_t i = 0; i < N; ++i)
-    {
-      VectorXd xp = x, xm = x;
-      VectorXd gg = g;
-      SparseMatrix hh;
-      xp[i] += eps;
-      xm[i] -= eps;
-      FT fp = f(xp, gg, hh), fm = f(xm, gg, hh);
-      g[i] = (fp - fm)/(2*eps);
-    }
-}
-
-template <class F>
-void eval_hessian_fd(F f, const VectorXd &x, MatrixXd &h,
-		      FT eps = 1e-5)
-{
-  size_t N = x.size();
-  h = MatrixXd::Zero(N,N);
-  for (size_t i = 0; i < N; ++i)
-    {
-      VectorXd xp = x, xm = x;
-      VectorXd gp = VectorXd::Zero(N), gm = VectorXd::Zero(N);
-      SparseMatrix hh;
-      xp[i] += eps;
-      xm[i] -= eps;
-      FT fp = f(xp, gp, hh), fm = f(xm, gm, hh);
-      h.row(i) = (gp - gm)/(2*eps);
-    }
-}
 
 int main(int argc, const char **argv)
 {
@@ -98,16 +58,9 @@ int main(int argc, const char **argv)
 
   std::cerr << total_mass << "\n";
 
-  auto eval = [&](const VectorXd &weights,
-		  VectorXd &g,
-		  SparseMatrix &h)
+  auto f = [&](const VectorXd &x, VectorXd &g, SparseMatrix &h)
     {
-      return ot_eval(t, functions, X, masses, weights, g, h);
-    };
-  auto evalg = [&](const VectorXd &x, VectorXd &g)
-    {
-      SparseMatrix h;
-      return eval(x,g,h);
+      return ot_eval(t, functions, X, masses, x, g, h);
     };
 
   VectorXd x = VectorXd::Zero(N);
@@ -117,77 +70,24 @@ int main(int argc, const char **argv)
     {
       VectorXd g;
       SparseMatrix h;
-      double fx = eval(x, g, h);
+      double fx = f(x, g, h);
 
       if (g.norm() < eps_g)
 	break;
 
-#if 0
-      // Eigen::SimplicialLDLT<SparseMatrix> solver;      
-      Eigen::SPQR<SparseMatrix> solver;
-      Eigen::VectorXd dH = h.diagonal();
-      FT mindiag = dH.minCoeff();
-
-      // Attempt repeated Cholesky factorization until the Hessian
-      // becomes positive semidefinite.
-      FT beta = 1e-5;
-      FT tau = (mindiag > 0) ? 0 : (-mindiag + beta);
-      size_t factorizations = 0;
-      while (true)
-	{
-	  // Add tau*I to the Hessian.
-	  if (tau > 0)
-	    {
-	      std::cerr << tau << "\n";
-	      for (size_t i = 0; i < N; ++i)
-		{
-		  int ii = static_cast<int>(i);
-		  h.coeffRef(ii, ii) = dH(i) + tau;
-		}
-	    }
-	  // Attempt Cholesky factorization.
-	  solver.compute(h);
-	  bool success = (solver.info() == Eigen::Success);
-	  factorizations++;
-	  // Check for success.
-	  if (success)
-	    break;
-	  tau = std::max(2*tau, beta);
-	  assert(factorizations <= 100);
-	}
-      VectorXd d = solver.solve(-g);
-#endif
-#if 1
       Eigen::SPQR<SparseMatrix> solver(h);
       VectorXd mg = -g;
       VectorXd d = solver.solve(mg);
-#else
-      // SparseMatrix id(N,N);
-      // id.setIdentity();
-      // h = h + 1e-9 * id;
 
-      Eigen::CholmodDecomposition<SparseMatrix> solver;
-      solver.setShift(1e-8);
-      solver.compute(h);
-      VectorXd mg = -g;
-      VectorXd d = solver.solve(mg);
-#endif
-
-#if 0
-      double alpha = MA::perform_Wolfe_linesearch(evalg, x, fx, g, d, 1);
-      if (alpha < 1e-15)
-	{
-	  d = -g;
-	  alpha = MA::perform_Wolfe_linesearch(evalg, x, fx, g, d, 1);
-	}
-#endif
-
+      // choose the step length by a simple backtracking, ensuring the
+      // invertibility (up to the invariance under the addition of a
+      // constance) of the hessian at the next point
       double alpha = 1;
       while(1)
 	{
 	  VectorXd xx = x + alpha * d;
-	  VectorXd gg;
-	  evalg(xx,gg);
+	  VectorXd gg; SparseMatrix hh;
+	  f(xx,gg,hh);
 	  gg = gg + masses;
 	  if (gg.minCoeff() > 1e-7)
 	    break;
@@ -196,55 +96,12 @@ int main(int argc, const char **argv)
 	}
 
       x = x + alpha * d;
-      std::cerr << "iteration " << iteration++
+      std::cerr << "it " << iteration++ << ":"
 		<< " f=" << fx 
 		<< " |df|=" << g.norm()
 		<< " tau = " << alpha << "\n";
     }
   while (1);
-  return 0;
-
-#if 1
-  {
-    srand(time(NULL));
-    VectorXd x = VectorXd::Random(N), gfd, gx;
-    SparseMatrix hx;
-    MatrixXd hfd;
-    eval(x, gx, hx);
-    eval_gradient_fd(eval, x, gfd, 1e-5);
-    eval_hessian_fd(eval, x, hfd, 1e-5);
-    
-    std::cerr << (gx-gfd).norm() << "\n";
-    std::cerr << (hfd-MatrixXd(hx)).norm() << "\n";
-    std::cerr << hx << "\n";
-  }
-#endif
-
-  Lbfgs lb (N);
-  //lb._pgtol = 1e-6 / N;
-  //lb._factr = 1e6;
-
-  VectorXd g = VectorXd::Zero(N), weights = g;
-  SparseMatrix h;
-  double f = eval(weights, g, h);
-  size_t k = 0;
-
-  while (1)
-    {
-      int r = lb.iterate((double *) &weights[0], f,
-			 (double *) &g[0]);
-      if (r == LBFGS_FG)
-	{
-	  f = eval(weights, g, h);
-	}
-      else if (r == LBFGS_NEW_X)
-        {
-          std::cerr << (++k) << ": f="
-                    << f << " |df| = " << g.maxCoeff() << "\n";
-        }
-      else
-        break;
-    }
   return 0;
 }
 
