@@ -69,19 +69,17 @@ int main()
   // generate points
   size_t N = 50;
   MatrixXd X(N,2);
-  VectorXd masses(N);
   for (size_t i = 0; i < N; ++i)
     {
       X(i,0) = rr();
       X(i,1) = rr();
-      masses(i) = total_mass/N;
     }
 
   auto eval = [&](const VectorXd &weights,
 		  VectorXd &g,
 		  SparseMatrix &h)
     {
-      return ot_eval(t, functions, X, masses, weights, g, h);
+      return MA::kantorovich(t, functions, X, weights, g, h);
     };
 
 

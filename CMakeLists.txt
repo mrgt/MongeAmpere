@@ -3,23 +3,13 @@
 
 project(MA)
 
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-cmake_minimum_required(VERSION 2.6.2)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_GREATER 2.6)
-  if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_GREATER 2.8.3)
-    cmake_policy(VERSION 2.8.4)
-  else()
-    cmake_policy(VERSION 2.6)
-  endif()
-endif()
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE "RELWITHDEBINFO")
+ENDIF()
 
-set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true )
- 
-if ( COMMAND cmake_policy )
-
-  cmake_policy( SET CMP0003 NEW )  
-
-endif()
+ADD_DEFINITIONS(-std=c++11 -g)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(Eigen3 REQUIRED)
@@ -57,7 +47,7 @@ include_directories(${MA_SOURCE_DIR}/thirdparty/lbfgspp/include)
 
 include_directories(${MA_SOURCE_DIR}/include)
 subdirs(tests)
-ADD_DEFINITIONS(-std=c++11 -pg)
+
 if ( NOT CGAL_FOUND )
 
   message(STATUS "This project requires the CGAL library, and will not be compiled.")

@@ -64,8 +64,9 @@ integrate_centroid(const typename CGAL::Point_2<K> &a,
 }
 
 template <class K, class F>
-typename K::FT
+auto
 integrate_1(const typename CGAL::Segment_2<K> &p, const F &f)
+  -> decltype(f(p.source()))
 {
   typedef typename K::FT FT;
   return sqrt(p.squared_length()) * f(CGAL::midpoint(p.source(),
@@ -109,15 +110,16 @@ integrate_monte_carlo(const typename CGAL::Point_2<K> &a,
 }
 
 template <class K, class F>
-typename K::FT
+auto
 integrate_1(const typename CGAL::Polygon_2<K> &p, const F &f)
+  -> decltype(f(p[0]))
 {
-  typedef typename K::FT FT;
-  FT r = 0;
+  typedef decltype(f(p[0])) RT;
+  RT r = RT();
   if (p.size() <= 2)
-    return r;
+    return RT();
   for (size_t i = 1; i < p.size() - 1; ++i)
-    r += MA::integrate_centroid(p[0],p[i],p[i+1],f);
+    r = r + MA::integrate_centroid(p[0],p[i],p[i+1],f);
   return r;
 }
 

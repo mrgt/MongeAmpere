@@ -2,6 +2,7 @@
 #define MA_FUNCTIONS_HPP
 
 #include <CImg.h>
+#include <MA/quadrature.hpp>
 
 namespace MA
 {

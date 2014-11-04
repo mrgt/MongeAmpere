@@ -3,16 +3,6 @@
 #include <lbfgs.hpp>
 #include <cstdlib>
 
-#undef Success
-
-// Suitesparse 4.3.1 does not define UF_long, which is expected by the
-// Eigen wrapper classes
-#include <cs.h>
-#ifndef UF_long
-#define  UF_long cs_long_t
-#endif
-#include <Eigen/SPQRSupport>
-
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::FT FT;
 typedef CGAL::Point_2<K> Point;
@@ -37,6 +27,9 @@ int main(int argc, const char **argv)
 {
   if (argc < 2)
     return -1;
+  size_t N = 100;
+  if (argc >= 3)
+    N = atoi(argv[2]);
 
   std::map<T::Face_handle,
 	   MA::Linear_function<K>> functions;
@@ -46,7 +39,6 @@ int main(int argc, const char **argv)
   boost::timer::auto_cpu_timer tm(std::cerr);
 
   // generate points
-  size_t N = 20000;
   MatrixXd X(N,2);
   VectorXd masses(N);
   for (size_t i = 0; i < N; ++i)
@@ -56,52 +48,8 @@ int main(int argc, const char **argv)
       masses(i) = total_mass/N;
     }
 
-  std::cerr << total_mass << "\n";
-
-  auto f = [&](const VectorXd &x, VectorXd &g, SparseMatrix &h)
-    {
-      return ot_eval(t, functions, X, masses, x, g, h);
-    };
-
-  VectorXd x = VectorXd::Zero(N);
-  double eps_g = 1e-6;
-  size_t iteration = 1;
-  do
-    {
-      VectorXd g;
-      SparseMatrix h;
-      double fx = f(x, g, h);
-
-      if (g.norm() < eps_g)
-	break;
-
-      Eigen::SPQR<SparseMatrix> solver(h);
-      VectorXd mg = -g;
-      VectorXd d = solver.solve(mg);
-
-      // choose the step length by a simple backtracking, ensuring the
-      // invertibility (up to the invariance under the addition of a
-      // constance) of the hessian at the next point
-      double alpha = 1;
-      while(1)
-	{
-	  VectorXd xx = x + alpha * d;
-	  VectorXd gg; SparseMatrix hh;
-	  f(xx,gg,hh);
-	  gg = gg + masses;
-	  if (gg.minCoeff() > 1e-7)
-	    break;
-	  alpha = alpha / 2;
-	  std::cerr << alpha << "\n";
-	}
-
-      x = x + alpha * d;
-      std::cerr << "it " << iteration++ << ":"
-		<< " f=" << fx 
-		<< " |df|=" << g.norm()
-		<< " tau = " << alpha << "\n";
-    }
-  while (1);
+  VectorXd res;
+  MA::ot_solve(t, functions, X, masses, res);
   return 0;
 }
 
