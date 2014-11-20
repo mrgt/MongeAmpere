@@ -20,6 +20,7 @@ namespace MA
       return f.first;
     if (f.first == g.second)
       return f.first;
+    assert((f.second == g.first) || (f.second == g.second));
     return f.second;
   }
 
@@ -99,7 +100,7 @@ namespace MA
       }
     };
 
-    typedef std::vector<Pgon_vertex> Pgon;
+    typedef std::vector<Pgon_edge> Pgon;
 
     Line
     edge_to_line (const Pgon_edge &e) const
@@ -120,6 +121,12 @@ namespace MA
     {
       return line_line_intersection(edge_to_line(E.first),
 				    edge_to_line(E.second));
+    }
+
+    Point
+    vertex_to_point (const Pgon_edge &a, const Pgon_edge &b) const
+    {
+      return vertex_to_point(Pgon_vertex(a,b));
     }
 
     bool inside(Vertex_handle_DT v, Vertex_handle_DT w, 
@@ -170,44 +177,42 @@ namespace MA
       size_t n = P.size();
       if (n == 0)
 	return;
-      
+
       // edge corresponding to the bisector of [vw]
       Pgon_edge L = make_edge_dt(v,w);
-      auto S = P[n-1];
-      R.clear();
-      for (auto E:P)
+      bool prev_inside = inside(v,w,Pgon_vertex(P[n-1], P[0]));
+      for (size_t i = 0; i < n; ++i)
 	{
-	  if (inside(v,w,E)) // E inside (negative side of) L
+	  size_t ii = (i+1)%n;
+	  bool cur_inside = inside(v,w,Pgon_vertex(P[i], P[ii]));
+	  if (prev_inside)
 	    {
-	      if (!inside(v,w,S)) // S not inside L
-		{
-		  auto edge = common(S, E);
-		  R.push_back(Pgon_vertex(L, edge));
-		}
-	      R.push_back(E);
+	      R.push_back(P[i]);
+	      if (cur_inside == false) // do we cross ?
+		R.push_back(L);
 	    }
-	  else if (inside(v,w,S)) // S inside L
-	    {
-	      auto edge = common(S, E);
-	      R.push_back(Pgon_vertex(L, edge));
-	    }
-	  S = E;
+	   // if cur_inside == false, we are fully outside and we do
+	   // not need to do anything. If cur_inside == true, we
+	   // cross.
+	  else if (cur_inside == true) 
+	    R.push_back(P[i]);
+	  prev_inside = cur_inside;
 	}
     }
   };
 
 
-  template <class K>
-  typename CGAL::Delaunay_triangulation_2<K>::Vertex_handle
-  nearest_vertex(const typename CGAL::Delaunay_triangulation_2<K> &dt,
+  template <class K, class Tds>
+  typename CGAL::Delaunay_triangulation_2<K,Tds>::Vertex_handle
+  nearest_vertex(const typename CGAL::Delaunay_triangulation_2<K,Tds> &dt,
 		 const typename CGAL::Point_2<K>  &p)
   {
     return dt.nearest_vertex(p);
   }
 
-  template <class K, class Gt>
-  typename CGAL::Regular_triangulation_2<Gt>::Vertex_handle
-  nearest_vertex(const typename CGAL::Regular_triangulation_2<Gt> &dt,
+  template <class K, class Gt, class Tds>
+  typename CGAL::Regular_triangulation_2<Gt,Tds>::Vertex_handle
+  nearest_vertex(const typename CGAL::Regular_triangulation_2<Gt,Tds> &dt,
 		 const typename CGAL::Point_2<K> &p)
   {
     return dt.nearest_power_vertex(p);
@@ -237,12 +242,16 @@ namespace MA
       return;
 
     // insert seed
-    Face_handle_T f = t.finite_faces_begin();
+    Face_handle_T f = t.finite_faces_begin()++;
     Vertex_handle_DT v = nearest_vertex(dt, f->vertex(0)->point());
 
     typedef std::pair<Vertex_handle_DT, Face_handle_T> VF_pair;
     std::priority_queue<VF_pair> Q;
     std::set<VF_pair> visited;
+    //std::map<Vertex_handle_DT, bool> vertex_visited;
+    //for (auto v = dt.finite_vertices_begin();
+    //     v != dt.finite_vertices_begin(); ++v)
+    // vertex_visited[v] = false;
 
     Q.push(VF_pair(v,f));
     visited.insert(VF_pair(v,f));
@@ -250,37 +259,32 @@ namespace MA
       {
 	VF_pair vfp = Q.top(); Q.pop();
 	Vertex_handle_DT v = vfp.first;
+	//vertex_visited[v] = true;
 	Face_handle_T f = vfp.second;
 
 	Tri_isector isector;
 	
 	// convert triangle to Pgon
-	Pgon_edge e1 = isector.make_edge_t(f->vertex(0),f->vertex(1));
-	Pgon_edge e2 = isector.make_edge_t(f->vertex(1),f->vertex(2));
-	Pgon_edge e3 = isector.make_edge_t(f->vertex(2),f->vertex(0));
 	Pgon R;
-	R.push_back(Pgon_vertex(e1,e2));
-	R.push_back(Pgon_vertex(e2,e3));
-	R.push_back(Pgon_vertex(e3,e1));
+	R.push_back(isector.make_edge_t(f->vertex(0),f->vertex(1)));
+	R.push_back(isector.make_edge_t(f->vertex(1),f->vertex(2)));
+	R.push_back(isector.make_edge_t(f->vertex(2),f->vertex(0)));
 
-	auto c = dt.incident_edges (v), done(c);
+	auto c = dt.incident_vertices (v), done(c);
 	do
 	  {
 	    Pgon Rl;
 	    if (dt.is_infinite(c))
 	      continue;
-	    auto w = c->first->vertex(dt.ccw(c->second));
-	    isector(R, v, w, Rl);
+	    isector(R, v, c, Rl);
 	    R = Rl;
 	  }
 	while (++c != done);
 	
 	// propagate to neighbors
-	for (auto Rv:R)
+	for (auto e:R)
 	  {
-	    Pgon_edge e = Rv.first;
 	    VF_pair p;
-
 	    if (e.type == Tri_isector::EDGE_T)
 	      {
 		size_t i = f->index(e.edge_t.first);
@@ -307,6 +311,13 @@ namespace MA
 	  }
 	out(R, f, v);
       }
+
+    // for (auto v = dt.finite_vertices_begin();
+    // 	 v != dt.finite_vertices_end(); ++v)
+    //   {
+    // 	if (vertex_visited[v] == false)  
+    // 	  std::cerr << "BUG => " << v->info() << "!!\n";
+    //   }
   }
 
   template <class T, class DT, class F>
@@ -329,8 +340,12 @@ namespace MA
        {
 	 Tri_isector isector;
 	 Polygon res;
-	 for (auto E:R)
-	   res.push_back(isector.vertex_to_point(E));
+	 size_t n = R.size();
+	 for (size_t i = 0; i < n; ++i)
+	   {
+	     size_t ii = (i+1)%n;
+	     res.push_back(isector.vertex_to_point(R[i], R[ii]));
+	   }
 	 out(res,f,v);
        });
   }  

@@ -9,6 +9,7 @@
 #include <CGAL/Regular_triangulation_euclidean_traits_2.h>
 #include <CGAL/Regular_triangulation_filtered_traits_2.h>
 #include <CGAL/Regular_triangulation_2.h>
+#include <CGAL/Triangulation_vertex_base_with_info_2.h>
 
 #include <MA/voronoi_triangulation_intersection.hpp>
 #include <MA/voronoi_polygon_intersection.hpp>
@@ -31,25 +32,31 @@ namespace MA
     typedef CGAL::Polygon_2<K> Polygon;
     typedef K::FT FT;
     typedef CGAL::Regular_triangulation_filtered_traits_2<K> RT_Traits;
-    typedef CGAL::Regular_triangulation_2<RT_Traits> RT;
+    typedef CGAL::Regular_triangulation_vertex_base_2<RT_Traits> Vbase;
+    typedef CGAL::Triangulation_vertex_base_with_info_2
+      <size_t, RT_Traits, Vbase> Vb;
+    typedef CGAL::Regular_triangulation_face_base_2<RT_Traits> Cb;
+    typedef CGAL::Triangulation_data_structure_2<Vb,Cb> Tds;
+    typedef CGAL::Regular_triangulation_2<RT_Traits, Tds> RT;
+
     typedef RT::Vertex_handle Vertex_handle_RT;
     typedef RT::Weighted_point Weighted_point;
     typedef typename CGAL::Point_2<K> Point;
     
     size_t N = X.rows();
     assert(weights.rows() == N);
-    assert(weight.cols() == 1);
+    assert(weights.cols() == 1);
     assert(X.cols() == 2);
     
-    std::vector<Weighted_point> Xw(N);
-    std::map<Point,size_t> indices;
+    // insert points with indices in the regular triangulation
+    std::vector<std::pair<Weighted_point,size_t> > Xw(N);
     for (size_t i = 0; i < N; ++i)
     {
-      Point p(X(i,0), X(i,1));
-      indices[p] = i;
-      Xw[i] = Weighted_point(p, weights(i));
+      Xw[i] = std::make_pair(Weighted_point(Point(X(i,0), X(i,1)),
+					    weights(i)), i);
     }
     RT dt (Xw.begin(), Xw.end());
+    dt.infinite_vertex()->info() = -1;
     
     // compute the quadratic part
     typedef MA::Voronoi_intersection_traits<K> Traits;
@@ -59,7 +66,7 @@ namespace MA
     typedef Eigen::Triplet<FT> Triplet;
     std::vector<Triplet> htri;
     
-    FT total(0), fval(0);
+    FT total(0), fval(0), total_area(0);
     g = Vector::Zero(N);
     MA::voronoi_triangulation_intersection_raw
       (densityT,dt,
@@ -68,22 +75,21 @@ namespace MA
 	    Vertex_handle_RT v)
        {
 	 Tri_isector isector;
-	 
+
 	 Polygon p;
 	 std::vector<Vertex_handle_RT> adj;
 	 for (size_t i = 0; i < pgon.size(); ++i)
 	   {
-	     p.push_back(isector.vertex_to_point(pgon[i]));
-	     typename Tri_isector::Pgon_edge e =
-	       MA::common(pgon[i], pgon[(i+1)%pgon.size()]);
-	     adj.push_back((e.type == Tri_isector::EDGE_DT) ?
-			   e.edge_dt.second : 0);
+	     size_t ii = (i+1)%pgon.size();
+	     p.push_back(isector.vertex_to_point(pgon[i], pgon[ii]));
+	     adj.push_back((pgon[i].type == Tri_isector::EDGE_DT) ?
+			   pgon[i].edge_dt.second : 0);
 	   }
-	 
-	 size_t idv = indices[v->point()];
+
+	 size_t idv = v->info();
 	 auto fit = densityF.find(f);
 	 assert(fit != densityF.end());
-	 auto fv = fit->second;
+	 auto fv = fit->second; // function to integrate 
 	 
 	 // compute hessian
 	 for (size_t i = 0; i < p.size(); ++i)
@@ -91,7 +97,7 @@ namespace MA
 	     if (adj[i] == 0)
 	       continue;
 	     Vertex_handle_RT w = adj[i];
-	     size_t idw = indices[w->point()];
+	     size_t idw = w->info();
 	     
 	     FT r = MA::integrate_1(p.edge(i), fv);
 	     FT d = 2*sqrt(CGAL::squared_distance(v->point(),
@@ -101,20 +107,22 @@ namespace MA
 	   }
 	 
 	 // compute value and gradient
-	 FT area = MA::integrate_1(p, fv);
+	 FT warea = MA::integrate_1(p, fv);
 	 FT intg = MA::integrate_3(p, [&](Point p) 
 				   {
 				     return fv(p) * 
 				     CGAL::squared_distance(p,
 							    v->point());
 				   });
-	 fval = fval + area * weights[idv] - intg; 
-	 g[idv] = g[idv] + area;
-	 total += area;
+	 fval = fval + warea * weights[idv] - intg; 
+	 g[idv] = g[idv] + warea;
+	 total += warea;
+         total_area += p.area();
        });
     h = SparseMatrix(N,N);
     h.setFromTriplets(htri.begin(), htri.end());
     h.makeCompressed();
+    std::cerr << "total area=" << total_area << "\n";
     return fval;
   }
 }
