@@ -23,17 +23,55 @@ namespace MA
     size_t neval;
   };
 
-  template <class SparseMatrix>
-  void check_laplacian_matrix(const SparseMatrix &h)
+  template <class SparseMatrix, class Vector>
+  Vector solve_laplacian_matrix(const SparseMatrix &h, 
+				const Vector &g,
+				bool verbose = false)
   {
     size_t N = h.rows(); 
     assert(N == h.cols());
     auto v = h.diagonal();
-    size_t i;
-    std::cerr << "diag = " << v.head(10)
-	      << " ... in [" << v.minCoeff()  << "," 
-	      << v.maxCoeff(&i) << "]\n";;
-    std::cerr << "maxCoeff => " << i << "\n";
+    if (v.minCoeff() == 0)
+      {
+	size_t i;
+	std::cerr << "Error: hessian of Kantorovich's functional "
+		  << "is not invertible:\n";
+	std::cerr << "diag = " << v.head(10)
+		  << " ... in [" << v.minCoeff()  << "," 
+		  << v.minCoeff(&i) << "]\n";;
+	std::cerr << "minCoeff => " << i << "\n";
+      }
+
+    // remove last row and column so that the linear system is
+    // invertible
+    Vector gs = g.head(N-1);
+    SparseMatrix hs = h.block(0,0,N-1,N-1); // top-left submatrix
+    Eigen::SimplicialLDLT<SparseMatrix> solver(hs);
+    Vector ds = solver.solve(Vector(gs));
+
+    // if cannot solve with Cholesky, use QR
+    double err = (hs*ds + gs).norm();
+    if (err > 1e-7) // FIXME: threshold
+      {
+	Eigen::SPQR<SparseMatrix> solver(hs);
+	ds = solver.solve(Vector(gs));
+	if (verbose)
+	  std::cerr << "rank(h) = " << solver.rank() << "\n";
+      }
+
+    // assemble result
+    Vector d(N);
+    d.head(N-1) = ds;
+    d(N-1) = 0;
+
+    if (verbose)
+      {
+	std::cerr << "|d|=" << d.norm() << "\n";
+	std::cerr << "max(d)=" << d.maxCoeff() << "\n";
+	std::cerr << "min(d)=" << d.minCoeff() << "\n";
+      }
+
+    return d;
   }
 
   template <class T, class Functions, class Matrix,
@@ -91,54 +129,16 @@ namespace MA
 	std::cerr << "Error: computed minimum mass is non-positive\n";
 	size_t i;
 	m.minCoeff(&i);
-	std::cerr << "This is because the Laguerre cell for the point ["
-		  << X(i,0) << ", " << X(i,1) << "], i=" << i << " is empty.\n";
+	std::cerr << "This is because the Laguerre cell for the "
+		  << "point [" << X(i,0) << ", " << X(i,1) << "],"
+		  << " i=" << i << " is empty.\n";
 	return;
       }
 
     while (g.norm() >= eps_g && 
 	   niter++ <= maxiter)
       {
-	check_laplacian_matrix(h);
-#if 1
-	// remove last row so that the linear system is invertible
-	Vector gs = g.head(N-1);
-	SparseMatrix hs = h.block(0,0,N-1,N-1); // top-left submatrix
-	Eigen::SimplicialLDLT<SparseMatrix> solver2(h);
-        //Eigen::SparseLU<SparseMatrix> solver(h);
-        Eigen::SPQR<SparseMatrix> solver(hs);
-        //Eigen::ConjugateGradient<SparseMatrix> solver(h);
-	Vector ds = -solver.solve(Vector(gs));
-	Vector d(N);
-	d.head(N-1) = ds;
-	d(N-1) = 0;
-
-	Vector ds2 = -solver2.solve(Vector(gs));
-	Vector d2(N);
-	d2.head(N-1) = ds2;
-	d2(N-1) = 0;
-
-	std::cerr << "rank(h) = " << solver.rank() << "\n";
-	// determine multiplicative constant:
-	// double k = g.norm() / (h*d).norm();
-	// d = k*d;
-#else
-        //Eigen::SimplicialLDLT<SparseMatrix> solver(h);
-        //Eigen::SparseLU<SparseMatrix> solver(h);
-        Eigen::SPQR<SparseMatrix> solver(h);
-        //Eigen::ConjugateGradient<SparseMatrix> solver(h);
-	Vector d = -solver.solve(Vector(g));
-#endif
-	double err = (h*d + g).norm();
-	double err2 = (h*d2 + g).norm();
-	assert(err < 1e-7);
-
-
-	std::cerr << "err=" << err << "\n";
-	std::cerr << "err2=" << err2 << "\n";
-	std::cerr << "|d|=" << d.norm() << "\n";
-	std::cerr << "max(d)=" << d.maxCoeff() << "\n";
-	std::cerr << "min(d)=" << d.minCoeff() << "\n";
+	Vector d = -solve_laplacian_matrix(h,g);
 	
 	// choose the step length by a simple backtracking, ensuring the
 	// invertibility (up to the invariance under the addition of a
@@ -166,7 +166,7 @@ namespace MA
 	  {
 	    std::cerr << "it " << niter << ":"
 		      << " f=" << fx 
-		      << " |df|=" << (g-masses).norm()
+		      << " |df|=" << g.norm()
 		      << " min(m)=" << masses.minCoeff()
 		      << " tau = " << alpha 
 		      << " eval = " << neval << "\n";

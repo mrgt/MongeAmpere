@@ -36,15 +36,14 @@ int main(int argc, const char **argv)
   double total_mass = MA::image_to_pl_function(image, t, functions);
 
   // generate points
-  //size_t ns[] = {10, 30, 50, 100, 200, 300, 400, 500};
-  size_t ns[] = {50,300, 400, 500};
+  size_t ns[] = {10, 30, 50, 100, 200, 300, 400, 500};
   std::ofstream os("bench_opttransport.res");
   
   for (size_t n : ns)
     {
       size_t N = n*n;
 
-#if 0
+#if 1
       double dx = 2/double(n-1), x0=-1.0;
       double dy = 2/double(n-1), y0=-1.0;
 

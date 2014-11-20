@@ -11,7 +11,6 @@
 #include <CGAL/Regular_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>
 
-
 #include <MA/voronoi_triangulation_intersection.hpp>
 #include <MA/voronoi_polygon_intersection.hpp>
 #include <MA/quadrature.hpp>
@@ -67,12 +66,8 @@ namespace MA
     typedef Eigen::Triplet<FT> Triplet;
     std::vector<Triplet> htri;
     
-    FT total(0), fval(0);
+    FT total(0), fval(0), total_area(0);
     g = Vector::Zero(N);
-
-    std::map<size_t, std::vector<size_t>> adjacencies;
-
-    double total_area = 0;
 
     MA::voronoi_triangulation_intersection_raw
       (densityT,dt,
@@ -81,18 +76,18 @@ namespace MA
 	    Vertex_handle_RT v)
        {
 	 Tri_isector isector;
-	 
+
 	 Polygon p;
 	 std::vector<Vertex_handle_RT> adj;
 	 for (size_t i = 0; i < pgon.size(); ++i)
 	   {
-	     p.push_back(isector.vertex_to_point(pgon[i]));
-	     typename Tri_isector::Pgon_edge e =
-	       MA::common(pgon[i], pgon[(i+1)%pgon.size()]);
-	     adj.push_back((e.type == Tri_isector::EDGE_DT) ?
-			   e.edge_dt.second : 0);
+             size_t ii = (i==0)?(pgon.size()-1):(i-1);
+	     //size_t ii = (i+1)%pgon.size();
+	     p.push_back(isector.vertex_to_point(pgon[i], pgon[ii]));
+	     adj.push_back((pgon[i].type == Tri_isector::EDGE_DT) ?
+			   pgon[i].edge_dt.second : 0);
 	   }
-	 
+
 	 size_t idv = v->info();
 	 auto fit = densityF.find(f);
 	 assert(fit != densityF.end());
@@ -116,7 +111,6 @@ namespace MA
 	 
 	 // compute value and gradient
 	 FT warea = MA::integrate_1(p, fv);
-	 total_area += p.area();
 	 FT intg = MA::integrate_3(p, [&](Point p) 
 				   {
 				     return fv(p) * 
@@ -126,11 +120,11 @@ namespace MA
 	 fval = fval + warea * weights[idv] - intg; 
 	 g[idv] = g[idv] + warea;
 	 total += warea;
+         total_area += p.area();
        });
     h = SparseMatrix(N,N);
     h.setFromTriplets(htri.begin(), htri.end());
     h.makeCompressed();
-    std::cerr << "total area=" << total_area << "\n";
     return fval;
   }
 }

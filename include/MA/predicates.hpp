@@ -68,7 +68,7 @@ namespace MA
       {
 	CGAL::Comparison_result c =
 	  CGAL::compare_power_distance(p, q, E);
-	return (c == CGAL::SMALLER || c == CGAL::EQUAL);
+	return (c == CGAL::SMALLER);
       }
       
       template <class K>
@@ -77,8 +77,9 @@ namespace MA
 		 const typename CGAL::Point_2<K> &q,
 		 const typename CGAL::Point_2<K> &E) const
       {
-	CGAL::Comparison_result c = CGAL::compare_distance(E, p, q);
-	return (c == CGAL::SMALLER || c == CGAL::EQUAL);
+	CGAL::Comparison_result c = 
+	  CGAL::compare_distance_to_point(E, p, q);
+	return (c == CGAL::SMALLER);
       }
     };
 
@@ -126,6 +127,7 @@ namespace MA
   public:
     typedef typename K::Exact_kernel_rt EK;
     typedef typename K::Approximate_kernel Approximate_kernel;
+
     
     typedef Voronoi_intersection_traits_base Exact_traits;
     typedef Voronoi_intersection_traits_base Filtering_traits;
