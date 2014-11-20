@@ -23,16 +23,16 @@ double rr()
 
 #include <boost/timer/timer.hpp>
 
+double a = 0;
 struct F
 {
-  double a;
-  F(): a(0) {}
+  F() {}
 
   template <class K, class FH, class VH>
   void operator() (const CGAL::Polygon_2<K> &p,
 		   FH tri, VH v)
   {
-    MA::ps_polygon(std::cout, p, 0.001);
+    MA::ps_polygon(std::cout, p, 0.001, 255, 0, 0, true);
     a = a + p.area();
   }
 };
@@ -41,7 +41,7 @@ struct F
 int main()
 {
   std::vector<Point> pts;
-  for (size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 5000; ++i)
     pts.push_back(Point(rr(), rr()));
   DT dt (pts.begin(), pts.end());
 
@@ -64,6 +64,6 @@ int main()
   MA::ps_begin(std::cout);
   MA::voronoi_triangulation_intersection(t,dt,f);
   MA::ps_end(std::cout);
-  std::cerr << "area = " << f.a << "\n";
+  std::cerr << "area = " << a << "\n";
 }
 

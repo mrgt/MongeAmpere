@@ -205,9 +205,9 @@ namespace MA
     return dt.nearest_vertex(p);
   }
 
-  template <class K, class Gt>
-  typename CGAL::Regular_triangulation_2<Gt>::Vertex_handle
-  nearest_vertex(const typename CGAL::Regular_triangulation_2<Gt> &dt,
+  template <class K, class Gt, class Tds>
+  typename CGAL::Regular_triangulation_2<Gt,Tds>::Vertex_handle
+  nearest_vertex(const typename CGAL::Regular_triangulation_2<Gt,Tds> &dt,
 		 const typename CGAL::Point_2<K> &p)
   {
     return dt.nearest_power_vertex(p);

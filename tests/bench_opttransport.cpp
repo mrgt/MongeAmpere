@@ -37,7 +37,7 @@ int main(int argc, const char **argv)
 
   // generate points
   //size_t ns[] = {10, 30, 50, 100, 200, 300, 400, 500};
-  size_t ns[] = {300, 400, 500};
+  size_t ns[] = {50,300, 400, 500};
   std::ofstream os("bench_opttransport.res");
   
   for (size_t n : ns)
