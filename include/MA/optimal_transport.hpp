@@ -2,7 +2,6 @@
 #define MA_OPTIMAL_TRANSPORT_HPP
 
 #include <MA/kantorovich.hpp>
-#include <Eigen/IterativeLinearSolvers>
 
 #undef Success
 
