@@ -1,6 +1,5 @@
 #include <MA/optimal_transport.hpp>
 #include <boost/timer/timer.hpp>
-#include <lbfgs.hpp>
 #include <cstdlib>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;

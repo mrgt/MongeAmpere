@@ -1,6 +1,5 @@
 #include <MA/optimal_transport.hpp>
 #include <boost/timer/timer.hpp>
-#include <lbfgs.hpp>
 #include <cstdlib>
 
 #undef Success

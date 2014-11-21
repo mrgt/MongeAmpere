@@ -41,10 +41,6 @@ link_libraries(${Boost_LIBRARIES})
 find_package( CGAL QUIET COMPONENTS)
 
 
-add_subdirectory(thirdparty/lbfgspp)
-link_libraries(lbfgspp)
-include_directories(${MA_SOURCE_DIR}/thirdparty/lbfgspp/include)
-
 include_directories(${MA_SOURCE_DIR}/include)
 subdirs(tests)
 
