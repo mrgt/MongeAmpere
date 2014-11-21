@@ -1,3 +1,0 @@
-[submodule "thirdparty/lbfgspp"]
-	path = thirdparty/lbfgspp
-	url = https://github.com/mrgt/lbfgspp.git

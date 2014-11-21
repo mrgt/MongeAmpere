@@ -89,7 +89,7 @@ int main(int argc, const char **argv)
   srand(time(NULL));
 
   // generate points
-  size_t N = 3000;
+  size_t N = 10000;
   MatrixXd X(N,2);
   VectorXd masses(N);
   for (size_t i = 0; i < N; ++i)
@@ -104,7 +104,9 @@ int main(int argc, const char **argv)
     {
       VectorXd weights;
       std::vector<Vector> barys;
+      std::cerr << "ITERATION " << i << "\n";
       MA::ot_solve(t, functions, X, masses, weights);
+      std::cerr << "\n\n";
       barycenters(t, X,  weights, barys);
 
       char fname[256];
