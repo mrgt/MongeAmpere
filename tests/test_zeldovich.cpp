@@ -57,19 +57,13 @@ void barycenters(const T &t,
   barys.resize(N,Vector(0,0));
   std::vector<FT> areas(N,0);
   
-  MA::voronoi_triangulation_intersection_raw
+  MA::voronoi_triangulation_intersection
     (t,dt,
-     [&] (const Pgon &pgon,
+     [&] (const Polygon &P,
 	  typename T::Face_handle f,
 	  Vertex_handle_RT v)
      {
-       Tri_isector isector;
-       Polygon P;
-       for (size_t i = 0; i < pgon.size(); ++i)
-	 P.push_back(isector.vertex_to_point(pgon[i]));
        size_t idv = indices[v->point()];
-       
-       // compute value and gradient
        Vector bary = MA::integrate_1(P, [&](Point p)
 				     {
 				       return Vector(p-CGAL::ORIGIN);
@@ -95,7 +89,7 @@ int main(int argc, const char **argv)
   srand(time(NULL));
 
   // generate points
-  size_t N = 1000;
+  size_t N = 3000;
   MatrixXd X(N,2);
   VectorXd masses(N);
   for (size_t i = 0; i < N; ++i)
@@ -105,7 +99,7 @@ int main(int argc, const char **argv)
       masses(i) = total_mass/N;
     }
 
-  double eps = 0.1;
+  double eps = 0.03;
   for (size_t i = 0; i < 100; ++i)
     {
       VectorXd weights;
@@ -122,8 +116,6 @@ int main(int argc, const char **argv)
 	  ofs << X(k,0) << " " << X(k,1) << "\n";
 	  X(k,0) = X(k,0) + eps * (X(k,0) - barys[k].x());
 	  X(k,1) = X(k,1) + eps * (X(k,1) - barys[k].y());
-	  //X(k,0) = barys[k].x();
-	  //X(k,1) = barys[k].y();
 	}
     }
   
