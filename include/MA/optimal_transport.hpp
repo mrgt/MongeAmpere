@@ -46,15 +46,15 @@ namespace MA
     // invertible
     Vector gs = g.head(N-1);
     SparseMatrix hs = h.block(0,0,N-1,N-1); // top-left submatrix
-    Eigen::SimplicialLDLT<SparseMatrix> solver(hs);
-    Vector ds = solver.solve(Vector(gs));
+    Eigen::SimplicialLLT<SparseMatrix> solver(hs);
+    Vector ds = solver.solve(gs);
 
     // if cannot solve with Cholesky, use QR
-    double err = (hs*ds + gs).norm();
+    double err = (hs*ds - gs).norm();
     if (err > 1e-7) // FIXME: threshold
       {
 	Eigen::SPQR<SparseMatrix> solver(hs);
-	ds = solver.solve(Vector(gs));
+	ds = solver.solve(gs);
 	if (verbose)
 	  std::cerr << "rank(h) = " << solver.rank() << "\n";
       }

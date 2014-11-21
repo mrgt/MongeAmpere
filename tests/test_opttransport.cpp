@@ -25,18 +25,12 @@ double rr()
 
 int main(int argc, const char **argv)
 {
-  if (argc < 2)
+  if (argc < 3)
     return -1;
-  size_t N = 100;
-  if (argc >= 3)
-    N = atoi(argv[2]);
+  size_t N = atoi(argv[1]);
 
   std::map<T::Face_handle,
 	   MA::Linear_function<K>> functions;
-  T t;
-  cimg_library::CImg<double> image(argv[1]);
-  double total_mass = MA::image_to_pl_function(image, t, functions);
-  boost::timer::auto_cpu_timer tm(std::cerr);
 
   // generate points
   MatrixXd X(N,2);
@@ -45,11 +39,20 @@ int main(int argc, const char **argv)
     {
       X(i,0) = rr();
       X(i,1) = rr();
-      masses(i) = total_mass/N;
+      masses(i) = 1.0;
     }
 
   VectorXd res;
-  MA::ot_solve(t, functions, X, masses, res);
+  for (size_t i = 2; i < argc; ++i)
+  {
+      T t;
+      cimg_library::CImg<double> image(argv[i]);
+      double total_mass = MA::image_to_pl_function(image, t, functions);
+      for (size_t i = 0; i < N; ++i)
+	masses(i) = total_mass/N;
+      boost::timer::auto_cpu_timer tm(std::cerr);
+      MA::ot_solve(t, functions, X, masses, res);
+  }
   return 0;
 }
 
