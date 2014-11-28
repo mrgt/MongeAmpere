@@ -2,7 +2,9 @@
 #define MA_OPTIMAL_TRANSPORT_HPP
 
 #include <MA/kantorovich.hpp>
+#include <Eigen/SparseCholesky>
 
+#ifdef MA_USE_SUITESPARSE_QR
 #undef Success
 
 // Suitesparse 4.3.1 does not define UF_long, which is expected by the
@@ -13,6 +15,7 @@
 #endif
 #include <Eigen/SPQRSupport>
 #include <Eigen/CholmodSupport>
+#endif
 
 namespace MA
 {
@@ -48,27 +51,24 @@ namespace MA
     Eigen::SimplicialLLT<SparseMatrix> solver(hs);
     Vector ds = solver.solve(gs);
 
-    // if cannot solve with Cholesky, use QR
+    // if cannot solve with Cholesky, use QR decomposition
     double err = (hs*ds - gs).norm();
     if (err > 1e-7) // FIXME: threshold
       {
+	std::cerr << "WARNING: in solve_laplacian_matrix: err=" << err << "\n";
+#ifdef MA_USE_SUITESPARSE_QR
+	std::cerr << "Resorting to QR decomposition";
 	Eigen::SPQR<SparseMatrix> solver(hs);
 	ds = solver.solve(gs);
 	if (verbose)
 	  std::cerr << "rank(h) = " << solver.rank() << "\n";
+#endif
       }
 
     // assemble result
     Vector d(N);
     d.head(N-1) = ds;
     d(N-1) = 0;
-
-    if (verbose)
-      {
-	std::cerr << "|d|=" << d.norm() << "\n";
-	std::cerr << "max(d)=" << d.maxCoeff() << "\n";
-	std::cerr << "min(d)=" << d.minCoeff() << "\n";
-      }
 
     return d;
   }

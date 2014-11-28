@@ -19,11 +19,13 @@ find_package(CImg REQUIRED)
 include_directories(${CIMG_INCLUDE_DIRS})
 link_libraries(${CIMG_PROCESS_LIBS})
 
-find_package(SuiteSparse REQUIRED)
-include_directories(${CSPARSE_INCLUDE_DIR})
-link_libraries(${SPQR_LIBRARY} ${CHOLMOD_LIBRARIES} lapack blas colamd)
-link_libraries(${CSPARSE_LIBRARY})
-link_libraries(${SUITESPARSECONFIG_LIBRARY})
+find_package(SuiteSparse)
+include_directories(${SUITESPARSE_INCLUDE_DIRS})
+link_libraries(${SUITESPARSE_LIBRARIES})
+
+if(SUITESPARSEQR_FOUND)
+  add_definitions(-DMA_USE_SUITESPARSE_QR)
+endif()
 
 find_package(TBB)
 if(TBB_FOUND)
