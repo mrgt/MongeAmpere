@@ -11,6 +11,8 @@
 namespace MA
 {
 
+  // Given two pairs f and g that contain a common element, the
+  // function/common/ returns this element.
   template <class T>
   const T&
   common(const std::pair<T,T> &f, 
@@ -129,10 +131,14 @@ namespace MA
       return vertex_to_point(Pgon_vertex(a,b));
     }
 
+    // The function /inside/ determines whether the point p obtained
+    // by intersecting the edges a and b is closer to v than to w, for
+    // the weighed square distance i.e. it returns true if
+    // ||p-v||^2 - w_v <= ||p-w||^2 - w_w and false if not.
     bool inside(Vertex_handle_DT v, Vertex_handle_DT w, 
-		const Pgon_vertex &E) const
+		const Pgon_edge &a,
+		const Pgon_edge &b) const
     {
-      const Pgon_edge &a = E.first, &b = E.second;
       typename Traits::Side3 side3;
       if (a.type == EDGE_T && b.type == EDGE_T)
 	{
@@ -180,11 +186,11 @@ namespace MA
 
       // edge corresponding to the bisector of [vw]
       Pgon_edge L = make_edge_dt(v,w);
-      bool prev_inside = inside(v,w,Pgon_vertex(P[n-1], P[0]));
+      bool prev_inside = inside(v,w,P[n-1], P[0]);
       for (size_t i = 0; i < n; ++i)
 	{
 	  size_t ii = (i+1)%n;
-	  bool cur_inside = inside(v,w,Pgon_vertex(P[i], P[ii]));
+	  bool cur_inside = inside(v,w,P[i], P[ii]);
 	  if (prev_inside)
 	    {
 	      R.push_back(P[i]);
