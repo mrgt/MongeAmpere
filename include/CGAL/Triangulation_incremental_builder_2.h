@@ -144,7 +144,6 @@ private:
     else
       { //found set adjacency and erase
 	auto e = emapit->second;
-	std::cerr << "merged edges\n";
 	tds.set_adjacency( fh,ih, e.first, e.second);
 	edge_map.erase(emapit);
       } 

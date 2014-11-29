@@ -73,40 +73,28 @@ namespace MA
     typedef MA::Voronoi_intersection_traits<K> Traits;
     typedef typename MA::Tri_intersector<T,RT,Traits> Tri_isector;  
     typedef typename Tri_isector::Pgon Pgon;
-        
-    FT total(0), fval(0), total_area(0);
+
     masses = Vector::Zero(N);
     centroids = Matrix::Zero(N,2);
 
-    MA::voronoi_triangulation_intersection_raw
+    MA::voronoi_triangulation_intersection
       (densityT,dt,
-       [&] (const Pgon &pgon,
+       [&] (const Polygon &poly,
 	    typename T::Face_handle f,
 	    Vertex_handle_RT v)
        {
-	 Tri_isector isector;
-
-	 Polygon p;
-	 std::vector<Vertex_handle_RT> adj;
-	 for (size_t i = 0; i < pgon.size(); ++i)
-	   {
-             size_t ii = (i==0)?(pgon.size()-1):(i-1);
-	     //size_t ii = (i+1)%pgon.size();
-	     p.push_back(isector.vertex_to_point(pgon[i], pgon[ii]));
-	   }
-
 	 size_t idv = v->info();
 	 auto fit = densityF.find(f);
 	 assert(fit != densityF.end());
 	 auto fv = fit->second; // function to integrate 
 	 
-	 FT warea = MA::integrate_1(p, fv);
-	 Vector_2 bary = MA::integrate_3(p, [&](Point p) 
-					 {
-					   return (fv(p) * 
-						   Vector_2(p-CGAL::ORIGIN));
-					 });
-	 masses[idv] = masses[idv] + warea;
+	 FT area = MA::integrate_1(poly, fv);
+	 Vector_2 bary = MA::integrate_3(poly, [&](Point p) 
+	 				 {
+	 				   return (fv(p) * 
+	 					   Vector_2(p-CGAL::ORIGIN));
+	 				 });
+	 masses[idv] = masses[idv] + area;
 	 centroids(idv,0) += bary.x();
 	 centroids(idv,1) += bary.y();
        });
