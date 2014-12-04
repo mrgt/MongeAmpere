@@ -27,20 +27,13 @@ if(SUITESPARSEQR_FOUND)
   add_definitions(-DMA_USE_SUITESPARSE_QR)
 endif()
 
-find_package(TBB)
-if(TBB_FOUND)
-  include_directories(${TBB_INCLUDE_DIRS})
-  link_libraries(${TBB_LIBRARIES})
-endif()
-
-
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS timer chrono REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_libraries(${Boost_LIBRARIES})
 
 # CGAL and its components
-find_package( CGAL QUIET COMPONENTS)
+find_package( CGAL REQUIRED)
 
 
 include_directories(${MA_SOURCE_DIR}/include)
