@@ -25,7 +25,8 @@ compatible compiler.
 Tests have been lead with these versions of the following librairies:
 
 * **Gcc** 4.9.1 (C++11 compatibility)
-* **CMake** 2.8.12.2
++ **CMake** 2.8.12.2
++ **CImg** 1.5.7
 + **Eigen** 3.2.1
 + **Suitesparse** 4.4.1 (optionnal)
 + **Boost** 1.55
