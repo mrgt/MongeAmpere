@@ -24,13 +24,15 @@ compatible compiler.
 
 Tests have been lead with these versions of the following librairies:
 
-* **Gcc** 4.8.1 (C++11 compatibility)
-+ **Eigen** 3.0
+* **Gcc** 4.9.1 (C++11 compatibility)
+* **CMake** 2.8.12.2
++ **Eigen** 3.2.1
 + **Suitesparse** 4.4.1 (optionnal)
-+ **Boost** 1.48
-+ **Cgal** 4.0
++ **Boost** 1.55
++ **Cgal** 4.4
 
 ``` sh
+sudo apt-get install cmake-curses-gui
 sudo apt-get install libeigen3-dev
 sudo apt-get install cimg-dev
 sudo apt-get install libboost-all-dev
@@ -54,7 +56,7 @@ Build with ccmake:
 ccmake ../MongeAmpere
 ```
 
-Then type successively c, c, g in ccmake to configure MongeAmpere. Build it:
+Then type successively c, c, g in ccmake to configure MongeAmpere. Then build it:
 
 ``` sh
 make
@@ -109,6 +111,5 @@ Finally install the program as described higher
 
 # For old systems with gcc < 4.8.1
 
-Check the instructions on the [Standalone-Installation](https://github.com/Homebrew/linuxbrew/wiki/Standalone-Installation) website.
-It allows you to use the linuxbrew compiler chain instead of the old one installed on your machine
+To use the linuxbrew compiler chain instead of the old one installed on your machine, check the instructions on the [Standalone-Installation](https://github.com/Homebrew/linuxbrew/wiki/Standalone-Installation) website.
 For more information about how to use linuxbrew and how to correct possible errors, check [linuxbrew](https://github.com/Homebrew/linuxbrew/) website.
