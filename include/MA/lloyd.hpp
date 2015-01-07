@@ -32,12 +32,12 @@
 namespace MA
 {
   template <class T, class Functions, class Matrix, class Vector>
-  void lloyd (const T &densityT,
-	      const Functions &densityF,
-	      const Matrix &X,
-	      const Vector &weights,
-	      Matrix &centroids,
-	      Vector &masses)
+  void first_moment (const T &densityT,
+		     const Functions &densityF,
+		     const Matrix &X,
+		     const Vector &weights,
+		     Matrix &centroids,
+		     Vector &masses)
   {
     typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
     typedef CGAL::Polygon_2<K> Polygon;
@@ -98,6 +98,21 @@ namespace MA
 	 centroids(idv,0) += bary.x();
 	 centroids(idv,1) += bary.y();
        });
+  }
+
+  template <class T, class Functions, class Matrix, class Vector>
+  void lloyd (const T &densityT,
+	      const Functions &densityF,
+	      const Matrix &X,
+	      const Vector &weights,
+	      Matrix &centroids,
+	      Vector &masses)
+  {
+    // compute first moments (integral of coordinates) and rescale
+    // them so as to get centroids of Voronoi cells.
+    first_moment(densityT, densityF, X, weights, centroids, masses);
+
+    size_t N = X.rows();
     for (size_t i = 0; i < N; ++i)
       {
 	centroids(i,0) /= masses[i];
