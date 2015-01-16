@@ -21,6 +21,8 @@
 #include <MA/predicates.hpp>
 #include <queue>
 
+#include <boost/unordered_map.hpp>
+
 namespace MA
 {
 
@@ -37,6 +39,15 @@ namespace MA
       return f.first;
     assert((f.second == g.first) || (f.second == g.second));
     return f.second;
+  }
+
+  template <class T>
+  bool
+  equal_up_to_order(const std::pair<T,T> &f,
+		    const std::pair<T,T> &g)
+  {
+    return ((f.first == g.first && f.second == g.second) ||
+	    (f.first == g.second && f.second == g.first));
   }
 
   template <class T, class DT, class Traits>
@@ -57,16 +68,38 @@ namespace MA
       EdgeType type;
       Edge_T edge_t;
       Edge_DT edge_dt;
-
-      bool
-      operator == (const Pgon_edge &other) const
+      bool operator == (const Pgon_edge &other) const
       {
 	if (type != other.type)
 	  return false;
 	if (type == EDGE_T) 
-	  return edge_t == other.edge_t;
+	  return equal_up_to_order(edge_t, other.edge_t);
 	else if (type == EDGE_DT) 
-	  return edge_dt == other.edge_dt;
+	  return equal_up_to_order(edge_dt, other.edge_dt);
+      }
+      friend std::size_t hash_value(const Pgon_edge &e)
+      {
+	if (e.type == EDGE_T)
+	  return (boost::hash_value((void*) &(*e.edge_t.first)) ^ 
+		  boost::hash_value((void*) &(*e.edge_t.second)));
+	else
+	  return (boost::hash_value((void*) &(*e.edge_dt.first)) ^ 
+		  boost::hash_value((void*) &(*e.edge_dt.second)));
+      }
+    };
+
+    struct Pgon_vertex: public std::pair<Pgon_edge,Pgon_edge> 
+    {
+      Pgon_vertex(const Pgon_edge &a, const Pgon_edge &b):
+	std::pair<Pgon_edge,Pgon_edge>(a,b) {}
+      bool operator == (const Pgon_vertex &other) const
+      {
+	return equal_up_to_order(*this,other);
+      }
+      friend std::size_t hash_value(const Pgon_vertex &v)
+      {
+	return (hash_value(v.first) ^ 
+		hash_value(v.second));
       }
     };
     
@@ -92,29 +125,6 @@ namespace MA
       return e;
     }
 
-    typedef std::pair<Pgon_edge,Pgon_edge> Pgon_vertex;
-
-    struct Pgon_vertex_hash
-    {
-      bool operator() (const Pgon_edge &e)
-      {
-	std::size_t seed = 0; 
-	boost::hash_combine(e.type, seed);
-	boost::hash_combine(e.edge_dt.first, seed);
-	boost::hash_combine(e.edge_dt.second, seed);
-	boost::hash_combine(e.edge_t.first, seed);
-	boost::hash_combine(e.edge_t.second, seed);
-      }
-
-      bool operator() (const Pgon_vertex &v)
-      {
-	std::size_t seed = 0;
-	boost::hash_combine(seed, v.first);
-	boost::hash_combine(seed, v.second);
-	return seed;
-      }
-    };
-
     typedef std::vector<Pgon_edge> Pgon;
 
     Line
@@ -130,16 +140,25 @@ namespace MA
       return construct_dual(e.edge_dt.first->point(),
 			    e.edge_dt.second->point());
     }
+
+    boost::unordered_map<Pgon_vertex, Point> _intersect_points;
     
     Point
-    vertex_to_point (const Pgon_vertex &E) const
+    vertex_to_point (const Pgon_vertex &E)
     {
-      return line_line_intersection(edge_to_line(E.first),
-				    edge_to_line(E.second));
+      auto ip = _intersect_points.find(E);
+      if (ip == _intersect_points.end())
+	{
+	  Point p = line_line_intersection(edge_to_line(E.first),
+					   edge_to_line(E.second));
+	  _intersect_points[E] = p;
+	  return p;
+	}
+      return ip->second;
     }
 
     Point
-    vertex_to_point (const Pgon_edge &a, const Pgon_edge &b) const
+    vertex_to_point (const Pgon_edge &a, const Pgon_edge &b)
     {
       return vertex_to_point(Pgon_vertex(a,b));
     }
@@ -255,7 +274,6 @@ namespace MA
     typedef typename Tri_isector::Pgon Pgon;
     typedef typename Tri_isector::Pgon_edge Pgon_edge;
     typedef typename Tri_isector::Pgon_vertex Pgon_vertex;
-    typedef typename Tri_isector::Pgon_vertex_hash Pgon_vertex_hash;
     
     if (t.number_of_vertices() == 0)
       return;
@@ -272,6 +290,8 @@ namespace MA
     //     v != dt.finite_vertices_begin(); ++v)
     // vertex_visited[v] = false;
 
+    Tri_isector isector;
+
     Q.push(VF_pair(v,f));
     visited.insert(VF_pair(v,f));
     while (!Q.empty())
@@ -280,8 +300,6 @@ namespace MA
 	Vertex_handle_DT v = vfp.first;
 	//vertex_visited[v] = true;
 	Face_handle_T f = vfp.second;
-
-	Tri_isector isector;
 	
 	// convert triangle to Pgon
 	Pgon R;
@@ -351,13 +369,14 @@ namespace MA
     typedef Tri_intersector<T, DT, Traits> Tri_isector;
     typedef typename Tri_isector::Pgon Pgon;
 
+
+    Tri_isector isector;
     voronoi_triangulation_intersection_raw
       (t, dt,
        [&] (const Pgon &R,
 	    typename T::Face_handle f,
 	    typename DT::Vertex_handle v)
        {
-	 Tri_isector isector;
 	 Polygon res;
 	 size_t n = R.size();
 	 for (size_t i = 0; i < n; ++i)
