@@ -21,10 +21,10 @@ double rr()
 
 int main(int argc, const char **argv)
 {
-  if (argc < 2)
+  if (argc < 3)
     return -1;
-  size_t N = atoi(argv[2]);
 
+  size_t N = atoi(argv[2]); // number of points
   size_t niter = 100;
   if (argc > 3)
     niter = atoi(argv[3]);
@@ -51,7 +51,7 @@ int main(int argc, const char **argv)
 
   for (size_t it = 0; it < niter; ++it)
     {
-      MA::lloyd(t, functions, X, weights, centroids, masses);
+      MA::lloyd(t, functions, X, weights, masses, centroids);
       X = centroids;
     }
 

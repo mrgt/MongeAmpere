@@ -115,7 +115,7 @@ namespace MA
 	     Vertex_handle_RT w = adj[i];
 	     size_t idw = w->info();
 	     
-	     FT r = MA::integrate_1(p.edge(i), fv);
+	     FT r = MA::integrate_1<FT>(p.edge(i), fv);
 	     FT d = 2*sqrt(CGAL::squared_distance(v->point(),
 						  w->point()));
 	     htri.push_back(Triplet(idv, idw, -r/d));
@@ -123,13 +123,13 @@ namespace MA
 	   }
 	 
 	 // compute value and gradient
-	 FT warea = MA::integrate_1(p, fv);
-	 FT intg = MA::integrate_3(p, [&](Point p) 
-				   {
-				     return fv(p) * 
-				     CGAL::squared_distance(p,
-							    v->point());
-				   });
+	 FT warea = MA::integrate_1<FT>(p, FT(0), fv);
+	 FT intg = MA::integrate_3<FT>(p, FT(0), [&](Point p)
+				       {
+					 return fv(p) * 
+					 CGAL::squared_distance(p,
+								v->point());
+				       });
 	 fval = fval + warea * weights[idv] - intg; 
 	 g[idv] = g[idv] + warea;
 	 total += warea;

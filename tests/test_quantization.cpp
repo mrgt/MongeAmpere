@@ -52,7 +52,7 @@ int main(int argc, const char **argv)
 	Triangulation::Face_handle f,
 	Delaunay_triangulation::Vertex_handle v)
    {
-     FT z = MA::integrate_1(p, functions[f]);
+     FT z = MA::integrate_1<FT>(p, FT(0), functions[f]);
      integrals[v] += z; 
      total += z;
    });

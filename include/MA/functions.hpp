@@ -113,7 +113,7 @@ image_to_pl_function(const cimg_library::CImg<double> &image,
       fs[f] = Function(p, fgrid[p], 
 		       q, fgrid[q],
 		       r, fgrid[r]);
-      tot_orig += CGAL::to_double(MA::integrate_centroid(p,q,r, fs[f]));
+      tot_orig += CGAL::to_double(MA::integrate_centroid<double>(p,q,r, fs[f]));
     }
   return tot_orig;
 }

@@ -63,10 +63,10 @@ void barycenters(const T &t,
 	  Vertex_handle_RT v)
      {
        size_t idv = indices[v->point()];
-       Vector bary = MA::integrate_1(P, [&](Point p)
-				     {
-				       return Vector(p-CGAL::ORIGIN);
-				     });
+       Vector bary = MA::integrate_1<Vector>(P, Vector(), [&](Point p)
+					     {
+					       return Vector(p-CGAL::ORIGIN);
+					     });
        FT area = P.area();
        areas[idv] = areas[idv] + area;
        barys[idv] = barys[idv] + bary;
