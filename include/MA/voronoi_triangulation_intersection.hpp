@@ -93,28 +93,6 @@ namespace MA
     }
 
     typedef std::pair<Pgon_edge,Pgon_edge> Pgon_vertex;
-
-    struct Pgon_vertex_hash
-    {
-      bool operator() (const Pgon_edge &e)
-      {
-	std::size_t seed = 0; 
-	boost::hash_combine(e.type, seed);
-	boost::hash_combine(e.edge_dt.first, seed);
-	boost::hash_combine(e.edge_dt.second, seed);
-	boost::hash_combine(e.edge_t.first, seed);
-	boost::hash_combine(e.edge_t.second, seed);
-      }
-
-      bool operator() (const Pgon_vertex &v)
-      {
-	std::size_t seed = 0;
-	boost::hash_combine(seed, v.first);
-	boost::hash_combine(seed, v.second);
-	return seed;
-      }
-    };
-
     typedef std::vector<Pgon_edge> Pgon;
 
     Line
@@ -248,14 +226,9 @@ namespace MA
     typedef Voronoi_intersection_traits<K> Traits;
     typedef typename DT::Vertex_handle Vertex_handle_DT;
     typedef typename T::Face_handle Face_handle_T;
-    typedef typename K::Point_2 Point;
 
     typedef Tri_intersector<T, DT, Traits> Tri_isector;
-    typedef typename Tri_isector::Edge_DT Edge_DT;
     typedef typename Tri_isector::Pgon Pgon;
-    typedef typename Tri_isector::Pgon_edge Pgon_edge;
-    typedef typename Tri_isector::Pgon_vertex Pgon_vertex;
-    typedef typename Tri_isector::Pgon_vertex_hash Pgon_vertex_hash;
     
     if (t.number_of_vertices() == 0)
       return;

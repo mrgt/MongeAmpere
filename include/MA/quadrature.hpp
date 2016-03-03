@@ -80,7 +80,6 @@ namespace MA
   RT
   integrate_1(const typename CGAL::Segment_2<K> &p, const F &f)
   {
-    typedef typename K::FT FT;
     return sqrt(p.squared_length()) * f(CGAL::midpoint(p.source(),
 						       p.target()));
   }
@@ -111,7 +110,6 @@ namespace MA
 			const F &f,
 			size_t N) 
   {
-    typedef typename K::FT FT;
     RT r;
     for (size_t i = 0; i < N; ++i)
       {

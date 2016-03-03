@@ -77,6 +77,7 @@ public:
     vh2->set_face(fh);
     for (std::size_t ih  = 0; ih < 3; ++ih)
       set_adjacency(fh, ih, edge_map);
+    return fh;
   }
 
 private:

@@ -107,7 +107,6 @@ namespace MA
 	 auto fv = fit->second; // function to integrate 
 	 
 	 // compute hessian
-	 size_t num_adj = 0;
 	 for (size_t i = 0; i < p.size(); ++i)
 	   {
 	     if (adj[i] == 0)
