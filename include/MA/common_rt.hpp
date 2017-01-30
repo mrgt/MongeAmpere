@@ -7,7 +7,7 @@
 #include <CGAL/Regular_triangulation_filtered_traits_2.h>
 #include <CGAL/Regular_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>
-
+#include <CGAL/Polygon_2.h>
 
 namespace MA
 {

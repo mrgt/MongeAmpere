@@ -14,6 +14,8 @@
 #ifndef MA_PREDICATES_HPP
 #define MA_PREDICATES_HPP
 
+#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
+
 namespace MA
 {
   template <class K>
