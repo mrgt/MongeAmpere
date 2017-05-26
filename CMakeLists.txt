@@ -35,6 +35,13 @@ link_libraries(${Boost_LIBRARIES})
 # CGAL and its components
 find_package( CGAL REQUIRED)
 
+# The next line fixes an issue with Anaconda interfering with X11
+# on Mac OS X. It causes the system to check the usual install path first.
+# Otherwise, it tries to use the X11 in Anaconda which is not suitable.
+set(CMAKE_INCLUDE_PATH "/opt/X11/include;${CMAKE_INCLUDE_PATH}")
+find_package(X11 REQUIRED)
+include_directories(${X11_INCLUDE_DIR})
+link_libraries(${X11_LIB})
 
 include_directories(${MA_SOURCE_DIR}/include)
 subdirs(tests)
