@@ -28,19 +28,18 @@ void barycenters(const T &t,
 		 std::vector<Vector> &barys)
 {
   size_t N = weights.size();
-  typedef CGAL::Regular_triangulation_filtered_traits_2<K> RT_Traits;
-  typedef CGAL::Regular_triangulation_2<RT_Traits> RT;
+  typedef CGAL::Regular_triangulation_2<K> RT;
   typedef RT::Vertex_handle Vertex_handle_RT;
   typedef RT::Weighted_point Weighted_point;
   typedef typename CGAL::Point_2<K> Point;
   
   std::vector<Weighted_point> Xw(N);
-  std::map<Point,size_t> indices;
+  std::map<Weighted_point,size_t> indices;
   for (size_t i = 0; i < N; ++i)
     {
       Point p(X(i,0), X(i,1));
-      indices[p] = i;
       Xw[i] = Weighted_point(p, weights(i));
+      indices[Xw[i]] = i;
     }
   RT dt (Xw.begin(), Xw.end());
   

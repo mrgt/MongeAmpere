@@ -14,7 +14,7 @@
 #ifndef MA_PREDICATES_HPP
 #define MA_PREDICATES_HPP
 
-#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
+//#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
 
 namespace MA
 {
@@ -43,21 +43,19 @@ namespace MA
 	return CGAL::bisector(p,q);
       }
       
-      template <class BP, class W>
-      typename CGAL::Line_2
-      <typename CGAL::Kernel_traits<BP>::Kernel>
-      operator ()(const typename CGAL::Weighted_point<BP,W> &p,
-		  const typename CGAL::Weighted_point<BP,W> &q) const
+      template <class K>
+      typename CGAL::Line_2<K>
+      operator ()(const typename CGAL::Weighted_point_2<K> &p,
+		  const typename CGAL::Weighted_point_2<K> &q) const
       {
 	return CGAL::radical_axis(p,q);
       }
 
-      template <class BP, class W>
-      typename CGAL::Point_2
-      <typename CGAL::Kernel_traits<BP>::Kernel>
-      operator ()(const typename CGAL::Weighted_point<BP,W> &p,
-		  const typename CGAL::Weighted_point<BP,W> &q,
-		  const typename CGAL::Weighted_point<BP,W> &r) const
+      template <class K>
+      typename CGAL::Point_2<K>
+      operator ()(const typename CGAL::Weighted_point_2<K> &p,
+		  const typename CGAL::Weighted_point_2<K> &q,
+		  const typename CGAL::Weighted_point_2<K> &r) const
       {
 	return CGAL::weighted_circumcenter(p,q,r);
       }
@@ -75,14 +73,16 @@ namespace MA
     class Side1
     {
     public:
-      template <class BP, class W>
+      template <class K>
       bool
-      operator()(const typename CGAL::Weighted_point<BP,W> &p,
-		 const typename CGAL::Weighted_point<BP,W> &q,
-		 const BP &E) const
+      operator()(const typename CGAL::Weighted_point_2<K> &p,
+		 const typename CGAL::Weighted_point_2<K> &q,
+		 const typename CGAL::Point_2<K> &E) const
       {
-	CGAL::Comparison_result c =
-	  CGAL::compare_power_distance(p, q, E);
+	typename K::Compare_power_distance_2 compare_power_distance =
+	  K().compare_power_distance_2_object();
+	//CGAL::Comparison_result c = compare_power_distance(p, q, E);
+	CGAL::Comparison_result c = compare_power_distance(E, p, q);
 	return (c == CGAL::SMALLER);
       }
       
@@ -159,14 +159,12 @@ namespace MA
     typedef CGAL::Filtered_predicate<
       typename Exact_traits::Side2,
       typename Filtering_traits::Side2,
-      CGAL::Weighted_converter_2<C2E>,
-      CGAL::Weighted_converter_2<C2F> > Side2;
+      C2E, C2F> Side2;
 
     typedef CGAL::Filtered_predicate<
       typename Exact_traits::Side3,
       typename Filtering_traits::Side3,
-      CGAL::Weighted_converter_2<C2E>,
-      CGAL::Weighted_converter_2<C2F> > Side3;
+      C2E, C2F> Side3;
   };
 
 }

@@ -14,7 +14,7 @@
 #ifndef MA_VORONOI_TRIANGULATION_INTERSECTION
 #define MA_VORONOI_TRIANGULATION_INTERSECTION
 
-#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
+//#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
 #include <CGAL/Regular_triangulation_2.h>
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <CGAL/Polygon_2.h>

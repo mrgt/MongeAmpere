@@ -1,6 +1,6 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
-#include <CGAL/Regular_triangulation_filtered_traits_2.h>
+//#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
+//#include <CGAL/Regular_triangulation_filtered_traits_2.h>
 #include <CGAL/Regular_triangulation_2.h>
 
 #include <MA/voronoi_polygon_intersection.hpp>
@@ -14,8 +14,8 @@ typedef CGAL::Vector_2<K> Vector;
 typedef CGAL::Line_2<K> Line;
 typedef CGAL::Polygon_2<K> Polygon;
 
-typedef CGAL::Regular_triangulation_filtered_traits_2<K> Traits;
-typedef CGAL::Regular_triangulation_2<Traits> RT;
+//typedef CGAL::Regular_triangulation_filtered_traits_2<K> Traits;
+typedef CGAL::Regular_triangulation_2<K> RT;
 
 double rr() 
 { 
@@ -32,7 +32,7 @@ int main()
   P.push_back(Point(1,1));
   P.push_back(Point(-1,1));
 
-  std::vector<Point> pts;
+  std::vector<RT::Weighted_point> pts;
   for (size_t i = 0; i < 100000; ++i)
     pts.push_back(RT::Weighted_point(Point(rr(), rr()), 0));
   RT rt (pts.begin(), pts.end());

@@ -19,8 +19,8 @@
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
-#include <CGAL/Regular_triangulation_filtered_traits_2.h>
+//#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
+//#include <CGAL/Regular_triangulation_filtered_traits_2.h>
 #include <CGAL/Regular_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>
 
@@ -44,13 +44,13 @@ namespace MA
     typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
     typedef CGAL::Polygon_2<K> Polygon;
     typedef K::FT FT;
-    typedef CGAL::Regular_triangulation_filtered_traits_2<K> RT_Traits;
-    typedef CGAL::Regular_triangulation_vertex_base_2<RT_Traits> Vbase;
+    //typedef CGAL::Regular_triangulation_filtered_traits_2<K> RT_Traits;
+    typedef CGAL::Regular_triangulation_vertex_base_2<K> Vbase;
     typedef CGAL::Triangulation_vertex_base_with_info_2
-      <size_t, RT_Traits, Vbase> Vb;
-    typedef CGAL::Regular_triangulation_face_base_2<RT_Traits> Cb;
+      <size_t, K, Vbase> Vb;
+    typedef CGAL::Regular_triangulation_face_base_2<K> Cb;
     typedef CGAL::Triangulation_data_structure_2<Vb,Cb> Tds;
-    typedef CGAL::Regular_triangulation_2<RT_Traits, Tds> RT;
+    typedef CGAL::Regular_triangulation_2<K, Tds> RT;
 
     typedef RT::Vertex_handle Vertex_handle_RT;
     typedef RT::Weighted_point Weighted_point;
@@ -115,8 +115,8 @@ namespace MA
 	     size_t idw = w->info();
 	     
 	     FT r = MA::integrate_1<FT>(p.edge(i), fv);
-	     FT d = 2*sqrt(CGAL::squared_distance(v->point(),
-						  w->point()));
+	     FT d = 2*sqrt(CGAL::squared_distance(v->point().point(),
+						  w->point().point()));
 	     htri.push_back(Triplet(idv, idw, -r/d));
 	     htri.push_back(Triplet(idv, idv, +r/d));
 	   }
@@ -127,7 +127,7 @@ namespace MA
 				       {
 					 return fv(p) * 
 					 CGAL::squared_distance(p,
-								v->point());
+								v->point().point());
 				       });
 	 fval = fval + warea * weights[idv] - intg; 
 	 g[idv] = g[idv] + warea;

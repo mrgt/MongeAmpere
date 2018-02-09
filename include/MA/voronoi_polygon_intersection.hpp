@@ -14,7 +14,7 @@
 #ifndef MA_VORONOI_INTERSECTION_HPP
 #define MA_VORONOI_INTERSECTION_HPP
 
-#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
+//#include <CGAL/Regular_triangulation_euclidean_traits_2.h>
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <MA/predicates.hpp>
 #include <boost/variant.hpp>

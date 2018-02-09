@@ -14,6 +14,7 @@
 #ifndef MA_FUNCTIONS_HPP
 #define MA_FUNCTIONS_HPP
 
+#define cimg_display 0 
 #include <CImg.h>
 #include <MA/quadrature.hpp>
 
