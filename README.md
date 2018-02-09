@@ -30,4 +30,4 @@ Tests have been performed with these versions of the following librairies:
 + **Eigen** 3.2.1
 + **Suitesparse** 4.4.1 (optionnal)
 + **Boost** 1.55
-+ **Cgal** 4.4
++ **Cgal** 4.11
