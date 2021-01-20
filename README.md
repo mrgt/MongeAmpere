@@ -19,12 +19,12 @@ done with this MA++.
 Dependencies
 ------------
 
-This software depends on recent versions of CGAL, Boost, SparseSuite (optional), CImg and CMake. It also requires a C++11
+This software depends on recent versions of CGAL, Boost, SparseSuite (optional), CImg and CMake. It also requires a C++14
 compatible compiler.
 
 Tests have been performed with these versions of the following librairies:
 
-* **Gcc** 4.9.1 (C++11 compatibility is required)
+* **Gcc** 4.9.1 (C++14 compatibility is required)
 + **CMake** 2.8.12.2
 + **CImg** 1.5.7
 + **Eigen** 3.2.1
